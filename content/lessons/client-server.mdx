@@ -1,0 +1,23 @@
+When multiple people use your app at the same time, they're all **clients** sharing one **server**.
+
+## Clients and Servers
+
+A **client** is anything that makes requests — a browser, a mobile app, another server. A **server** is a program that listens for those requests and responds.
+
+The key insight: one server handles thousands of clients. Not by running thousands of copies of itself, but by handling requests one at a time, very fast.
+
+## Shared State
+
+Multiple clients accessing the same server means they all share the same database. When Alice updates her profile, Bob's next page load sees the updated data.
+
+This is a feature. It's also a source of bugs — two clients writing to the same record at the same time can corrupt data. Your database handles this with transactions and locks.
+
+## The Stateless Request
+
+HTTP is stateless: each request stands alone. The server doesn't remember the previous request from the same client. That's why you need:
+
+- **Sessions** or **JWTs** to know who's logged in
+- **Cookies** to persist data across requests
+- A **database** to remember anything important
+
+The server handles thousands of clients by treating each request as independent.

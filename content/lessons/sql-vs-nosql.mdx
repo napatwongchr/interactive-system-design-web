@@ -1,0 +1,37 @@
+Choosing between SQL and NoSQL is one of the most common system design decisions. Here's how to think about it.
+
+## SQL (Relational Databases)
+
+SQL databases store data in tables with rows and columns. Relationships between tables are enforced. The schema is fixed.
+
+**Examples:** Postgres, MySQL, SQLite
+
+**Good for:**
+- Structured data with clear relationships (users, orders, products)
+- Queries that join multiple tables
+- Transactions where multiple operations must all succeed or all fail
+- When data integrity matters more than raw speed
+
+## NoSQL (Non-Relational Databases)
+
+NoSQL is an umbrella term for databases that don't use tables. Different types serve different use cases.
+
+**Document stores** (MongoDB, Firestore) — store JSON-like documents. Flexible schema. Good for content-heavy apps or when the data shape varies.
+
+**Key-value stores** (Redis, DynamoDB) — fast lookups by key. Good for caches, sessions, real-time data.
+
+**Column-family stores** (Cassandra) — optimized for wide tables and time-series data. Good for massive scale writes.
+
+**Graph databases** (Neo4j) — optimized for relationships between entities. Good for social networks, recommendations.
+
+## The Default Choice
+
+For most apps: **use Postgres.** It's reliable, well-understood, handles 99% of use cases, and supports JSON columns when you need flexibility.
+
+## When to Consider NoSQL
+
+- You need Redis-style caching or pub/sub (use Redis alongside Postgres)
+- Your data is genuinely document-shaped with variable structure (consider MongoDB or Firestore)
+- You're at massive scale with specific write patterns (Cassandra, DynamoDB)
+
+Don't choose NoSQL because it sounds modern. Choose it because it solves a specific problem SQL doesn't.

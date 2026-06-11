@@ -1,0 +1,43 @@
+Some tasks take too long to do during a web request. Async operations move them off the request path.
+
+## The Problem
+
+A user submits a form. Your server needs to:
+1. Save the data to the database
+2. Send a welcome email
+3. Process an uploaded image
+4. Update some analytics
+
+Steps 2–4 each take 200–500ms. The user waits 1–2 seconds for the page to load. That's too slow.
+
+## The Solution: Background Jobs
+
+Do the minimum required to respond, then do the rest asynchronously:
+
+1. Save to database — 20ms
+2. Enqueue a "send welcome email" job — 5ms
+3. Respond to the user — total: 25ms
+
+A background worker picks up the job and sends the email while the user is already on the next page.
+
+## Queue Patterns
+
+**Simple queue** — jobs are processed in order. Works for most cases.
+
+**Priority queue** — urgent jobs jump the line. Used for time-sensitive work.
+
+**Retry with backoff** — if a job fails (email service is down), try again in 1 minute, then 5, then 30. Don't just fail silently.
+
+## Tools
+
+- **BullMQ** — Redis-backed job queue for Node.js
+- **Inngest** — serverless-friendly event-driven jobs
+- **Trigger.dev** — background jobs with a nice developer experience
+
+## What to Move Off the Request Path
+
+- Sending emails or notifications
+- Image/video processing
+- Generating reports or exports
+- Syncing to external services
+- Anything that calls a slow API

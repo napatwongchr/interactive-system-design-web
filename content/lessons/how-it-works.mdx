@@ -1,0 +1,28 @@
+You shipped an app. Someone uses it. What actually happens?
+
+## From Click to Database
+
+When a user clicks "Save" in your AI-generated app:
+
+1. The frontend sends a `POST /api/items` request with the data
+2. Your backend receives the request and validates the input
+3. The backend runs a `INSERT INTO items ...` query against the database
+4. The database writes the row and returns the new ID
+5. The backend sends a `200 OK` response with the saved item
+6. The frontend updates the UI
+
+## What the AI Generated
+
+AI tools generate this stack automatically. The names might differ, but the structure is the same:
+
+- **Route handlers** — functions that respond to specific URLs
+- **ORM queries** — code that talks to the database without raw SQL
+- **Environment variables** — secrets like `DATABASE_URL` kept out of your code
+
+## Common Confusion Points
+
+**"It works on my machine"** — Your local machine runs all three layers together. In production they're separate services.
+
+**Serverless functions** — These are just backend functions that start on demand. Same three-layer model, different deployment.
+
+**The database isn't in your code** — Your code talks to the database over a network connection. The data lives somewhere else entirely.

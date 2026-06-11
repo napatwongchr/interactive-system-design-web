@@ -1,0 +1,37 @@
+Architecture diagrams communicate how your system fits together. They're the shared language of system design.
+
+## Why Draw Diagrams
+
+Complex systems can't fit in one person's head. Diagrams externalize the structure so a team can reason about it together.
+
+A good diagram answers: what components exist, how they communicate, and where the boundaries are.
+
+## The C4 Model
+
+A useful framework for thinking about system diagrams at different levels:
+
+**System Context** — your system and the users/external systems it interacts with. No internal details. Answers: what does this system do?
+
+**Container** — the major technical building blocks (web app, API server, database, Redis). Answers: what runs where?
+
+**Component** — the major components inside a container. Answers: how is this container structured?
+
+**Code** — class diagrams, sequence diagrams. Rarely needed except for complex algorithms.
+
+## Common Symbols
+
+No universal standard, but these are widely understood:
+
+- **Rectangle** — a component or service
+- **Cylinder** — a database
+- **Arrow** — communication, labeled with the protocol (HTTP, TCP, SQL)
+- **Cloud** — external system or the internet
+- **Dashed box** — a boundary or group
+
+## Practical Tips
+
+Draw the simplest diagram that communicates what you need. Don't show every component — show the ones relevant to the decision you're making.
+
+Use tools like Excalidraw, Mermaid, or draw.io. Keep diagrams in your repo next to the code — they rot less that way.
+
+Label your arrows with the important details: `HTTP/JSON`, `Postgres TCP`, `Redis RESP`.

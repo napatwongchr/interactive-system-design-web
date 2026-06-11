@@ -1,0 +1,25 @@
+Every server has finite resources. Understanding those limits helps you predict when your app will break.
+
+## CPU
+
+The CPU executes your code. A single CPU core can only do one thing at a time. Node.js is single-threaded — it handles many requests by switching between them rapidly, but it can only run one at a time.
+
+CPU-bound code (complex calculations, JSON parsing of large payloads, image resizing) blocks that thread. Everything waits.
+
+## Memory
+
+RAM stores your in-progress work: request data, cached values, open database connections. When memory fills up, the operating system starts swapping to disk (slow) or the process crashes.
+
+Memory leaks — where code holds references to objects it no longer needs — are a common cause of slow memory growth.
+
+## Connections
+
+Your server has a limited number of file descriptors — essentially, open connections. Each open HTTP connection, each database connection, each file read consumes one.
+
+Database connection pools (usually 10–100 connections) are the most common bottleneck. If all connections are in use, new requests wait.
+
+## Concurrency
+
+A Node.js server can handle thousands of concurrent requests because I/O (waiting for the database, waiting for a file) is non-blocking. But if every request is CPU-bound, you max out quickly.
+
+The rule: servers are good at I/O-bound work. Offload CPU-bound work to background jobs.

@@ -1,0 +1,35 @@
+A database index makes queries faster by letting the database jump directly to the rows it needs instead of scanning the whole table.
+
+## The Book Analogy
+
+Imagine finding every mention of "HTTP" in a 500-page book. Without an index, you read every page. With the index at the back, you go straight to pages 23, 47, and 201.
+
+A database index works the same way.
+
+## What Gets Indexed
+
+Every table has a primary key index automatically. Beyond that, you should add indexes for columns you frequently query by:
+
+```sql
+-- Without index: scans all rows to find user's posts
+SELECT * FROM posts WHERE user_id = 42;
+
+-- With index on user_id: goes directly to those rows
+CREATE INDEX idx_posts_user_id ON posts(user_id);
+```
+
+## The Trade-off
+
+Indexes speed up reads. They slow down writes.
+
+Every time you insert, update, or delete a row, the database must update every index on that table. For a table with 5 indexes, a write does 6 operations.
+
+Don't add indexes speculatively. Add them when you identify slow queries.
+
+## Finding Slow Queries
+
+Use `EXPLAIN ANALYZE` in Postgres to see a query's execution plan. Look for **Seq Scan** (full table scan) on large tables — those are candidates for indexes.
+
+## Composite Indexes
+
+An index on `(user_id, created_at)` speeds up queries filtered by user and sorted by time. The order of columns matters: the index helps queries that filter on `user_id` first.

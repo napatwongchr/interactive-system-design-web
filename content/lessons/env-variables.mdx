@@ -1,0 +1,38 @@
+Environment variables let you configure your app differently in different environments — and keep secrets out of your code.
+
+## The Problem
+
+Your app needs a database password. You can't commit it to GitHub — anyone who forks your repo would have it. You also need different values locally vs in production.
+
+Environment variables solve both problems.
+
+## How They Work
+
+Environment variables are key-value pairs set outside your code:
+
+```bash
+DATABASE_URL=postgres://user:password@localhost:5432/mydb
+SECRET_KEY=abc123verysecret
+NODE_ENV=production
+```
+
+Your code reads them at runtime:
+
+```typescript
+const dbUrl = process.env.DATABASE_URL
+```
+
+## The `.env` File
+
+Locally, you store these in a `.env` file. **Always add `.env` to `.gitignore`.** The `.env` file is never committed — each developer and each deployment environment has their own copy.
+
+In production (Vercel, Railway, Render), you set them in the dashboard.
+
+## Common Patterns
+
+- `NODE_ENV` — `development`, `test`, or `production`
+- `DATABASE_URL` — the database connection string
+- `NEXT_PUBLIC_` prefix — in Next.js, makes a variable available to the browser
+- API keys for third-party services (Stripe, Resend, OpenAI)
+
+Never log environment variables. Never put them in error messages. Treat them like passwords.

@@ -1,0 +1,40 @@
+Error logs tell you exactly what went wrong — once you know how to read them.
+
+## Anatomy of a Log Line
+
+Most log lines have the same structure:
+
+```
+2024-01-15T14:32:01.234Z ERROR [api/users] Connection timeout after 5000ms
+  at QueryExecutor.execute (db/query.ts:47)
+  at UserRepository.findById (repos/user.ts:23)
+  at UsersHandler.getUser (api/users.ts:12)
+```
+
+- **Timestamp** — when it happened
+- **Level** — ERROR, WARN, INFO, DEBUG
+- **Location** — which module or route
+- **Message** — what went wrong
+- **Stack trace** — the call chain that led here
+
+## Levels
+
+| Level | Meaning |
+|-------|---------|
+| ERROR | Something broke. Requires action. |
+| WARN | Something unexpected but recoverable. Worth watching. |
+| INFO | Normal operation events. |
+| DEBUG | Verbose details, usually off in production. |
+
+## Finding the Root Cause
+
+Stack traces are read bottom-up: the bottom is where the request entered your code, the top is where it crashed.
+
+Look for the first line in your own code (not in `node_modules`). That's where the problem is, or where you need to add more logging.
+
+## Common Patterns
+
+- `ECONNREFUSED` — the database or service isn't running or isn't reachable
+- `ETIMEDOUT` — a connection or query took too long
+- `cannot read properties of undefined` — code assumed data existed, it didn't
+- `relation does not exist` — a database migration didn't run

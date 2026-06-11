@@ -1,0 +1,29 @@
+A load balancer distributes incoming requests across multiple servers so no single server gets overwhelmed.
+
+## The Core Idea
+
+One server can handle, say, 500 concurrent requests comfortably. At 2,000 concurrent users, you need four servers. But how do users know which server to talk to?
+
+The load balancer is the single entry point. It receives every request and forwards it to one of your servers, spreading the load evenly.
+
+## How It Decides
+
+**Round-robin** — send request 1 to server A, request 2 to server B, request 3 to server C, request 4 back to server A. Simple and even.
+
+**Least connections** — send to whichever server has the fewest active connections. Better for requests with varying processing times.
+
+**IP hash** — always send the same client to the same server. Useful if your servers have local state (though stateless servers are better).
+
+## Health Checks
+
+Load balancers continuously check if servers are healthy. If a server stops responding, the load balancer stops sending it traffic. When it recovers, traffic resumes.
+
+This is how you deploy without downtime: take servers out of rotation, update them, put them back.
+
+## Layer 4 vs Layer 7
+
+**Layer 4** (TCP) — routes based on IP address and port. Fast. Can't inspect the request.
+
+**Layer 7** (HTTP) — routes based on the URL path, headers, or cookies. Can route `/api/*` to API servers and `/` to web servers.
+
+Vercel, AWS ALB, and Nginx (in proxy mode) are all layer 7 load balancers.

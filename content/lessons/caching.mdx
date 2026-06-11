@@ -1,0 +1,29 @@
+Caching stores the result of an expensive operation so you don't have to repeat it.
+
+## The Core Idea
+
+Some data doesn't change often. A user's profile. The list of product categories. Yesterday's analytics. If 10,000 users all request the same data, why hit the database 10,000 times?
+
+Cache the result after the first request. Return it instantly for the next 9,999.
+
+## Where to Cache
+
+**In-memory cache** — stored in your server's RAM. Fastest possible. Disappears on restart. Good for data that can be recomputed.
+
+**Redis** — a dedicated cache server. Shared across multiple server instances. Survives server restarts. The standard choice for production caching.
+
+**HTTP cache headers** — tell browsers and CDNs to cache responses. Free caching with no code on your server.
+
+## Cache Invalidation
+
+The hard problem. How do you update the cache when the data changes?
+
+- **TTL (Time-To-Live)** — cache entries expire after N seconds. Simple. Data can be stale.
+- **Explicit invalidation** — when you write to the database, also delete the cache entry. Complex. Always fresh.
+- **Cache-aside** — read from cache, on miss read from DB and populate cache. Most common pattern.
+
+## What Not to Cache
+
+- User-specific data (unless keyed by user ID)
+- Data that changes on every request
+- Anything that must be real-time

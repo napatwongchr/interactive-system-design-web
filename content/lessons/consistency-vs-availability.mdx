@@ -1,0 +1,32 @@
+The CAP theorem states that a distributed system can only guarantee two of three properties. Understanding this trade-off shapes every database and architecture decision.
+
+## The Three Properties
+
+**Consistency (C)** — every read returns the most recent write. If you write "John's balance is $100" and immediately read it from a different server, you get $100, not a stale value.
+
+**Availability (A)** — every request gets a response. The system doesn't return an error just because some nodes are unreachable.
+
+**Partition Tolerance (P)** — the system works even when network partitions occur (some nodes can't communicate with others).
+
+## The Trade-off
+
+Network partitions happen. You can't opt out of P in a real distributed system. So the real choice is **CP vs AP**:
+
+**CP systems** — choose consistency over availability. When partitioned, refuse to respond rather than return stale data. Good for financial systems, inventory management — anywhere stale data causes real harm.
+
+**AP systems** — choose availability over consistency. When partitioned, continue serving requests, possibly with stale data. Reconcile later. Good for social feeds, shopping carts, analytics — anywhere eventual consistency is acceptable.
+
+## Eventual Consistency
+
+Most modern systems are AP with **eventual consistency**: after a write, all nodes will eventually converge to the same state — just not immediately.
+
+Your social media likes counter might be off by a few for a second. Your bank balance must be correct instantly.
+
+## In Practice
+
+- **Postgres with synchronous replication** — CP
+- **Cassandra** — AP by default
+- **DynamoDB** — configurable, AP by default
+- **Redis Cluster** — typically AP
+
+Most apps should default to Postgres and not worry about this trade-off until they're distributed across data centers.

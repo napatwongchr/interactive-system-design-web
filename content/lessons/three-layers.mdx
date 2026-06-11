@@ -1,0 +1,24 @@
+Your app has three distinct layers, each with a different job.
+
+## The Three Layers
+
+**Frontend** — what the user sees and interacts with. Runs in the browser. Built with HTML, CSS, and JavaScript. Your React or Vue app lives here.
+
+**Backend** — where the logic lives. Runs on a server. Handles requests from the frontend, applies business rules, and talks to the database.
+
+**Database** — where the data lives. Stores everything persistently. The backend reads from and writes to it.
+
+## Why Separate Them?
+
+Each layer can be scaled independently. Your frontend can be served from a CDN globally while your backend runs on a few servers and your database runs on one powerful machine.
+
+Each layer also has a clear responsibility. The frontend doesn't store data. The backend doesn't render HTML. The database doesn't run business logic.
+
+## What Your Vibe-Coded App Looks Like
+
+Most AI-generated apps follow this pattern:
+- A React frontend on Vercel
+- An Express or Next.js API on a cloud server
+- A Postgres or SQLite database
+
+The layers are there even if you didn't consciously design them.

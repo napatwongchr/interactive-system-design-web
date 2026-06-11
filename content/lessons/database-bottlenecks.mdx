@@ -1,0 +1,25 @@
+The database is almost always the first thing that breaks under load. Here's why.
+
+## Why the Database
+
+Your server is stateless — you can run many copies of it. Your database is stateful — there's one, and it has a fixed amount of resources.
+
+Every request that needs data hits the database. At 1,000 users, that's 1,000 concurrent queries. Most databases handle this fine. At 10,000 with poorly written queries, it falls apart.
+
+## Slow Queries
+
+A query that scans an entire table is fine at 1,000 rows. At 10 million rows, it takes seconds. The fix is indexing — but you need to know which queries to index.
+
+**N+1 queries** are a common trap: fetching a list of posts, then fetching the author for each post individually. That's 1 + N database round trips instead of 1. ORMs make this easy to do by accident.
+
+## Connection Pool Exhaustion
+
+Your server maintains a pool of database connections. Each query needs one. If 100 requests come in at once and your pool has 20 connections, 80 requests wait.
+
+The fix: reduce query time (so connections are freed faster), increase pool size (carefully — databases also have limits), or cache results so fewer queries run.
+
+## Lock Contention
+
+When multiple requests try to update the same row simultaneously, the database serializes them. One waits while the other runs. At high concurrency, this creates queues.
+
+The fix: keep transactions short and targeted.

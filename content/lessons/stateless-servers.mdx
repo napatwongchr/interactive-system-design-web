@@ -1,0 +1,31 @@
+A stateless server doesn't remember anything between requests. This makes it trivially easy to scale.
+
+## Stateful vs Stateless
+
+**Stateful server** — stores session data in memory. Knows which users are logged in. Can't be replaced or duplicated without losing that state.
+
+**Stateless server** — every request contains everything needed to process it. No memory between requests. Any server can handle any request.
+
+## Why Stateless Scales Better
+
+With stateful servers, you need sticky sessions — the load balancer must always send a user to the same server. If that server dies, the user's session dies.
+
+With stateless servers, the load balancer can route requests anywhere. Add a server: new capacity immediately. Remove a server: no sessions lost.
+
+## How to Be Stateless
+
+Move all state out of the server:
+
+| State | Where to store it |
+|-------|------------------|
+| Sessions | JWT in the client, or Redis |
+| Uploaded files | S3 or equivalent object storage |
+| Background job results | Database or Redis |
+| Rate limiting counters | Redis |
+| Caches | Redis |
+
+The pattern: your servers become disposable. The database and Redis hold the truth.
+
+## The Twelve-Factor App
+
+The concept of stateless processes comes from the [Twelve-Factor App](https://12factor.net/) methodology. It's worth reading — most cloud-native apps follow these principles, and AI-generated apps often violate them accidentally.

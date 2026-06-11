@@ -1,0 +1,39 @@
+A message queue decouples the services in your system so they don't need to talk to each other directly.
+
+## The Problem with Direct Calls
+
+Service A calls Service B to process an order. Service B is slow, or down, or overwhelmed. Service A waits. Or fails. Or both.
+
+Direct calls create tight coupling and fragility. If B has a problem, A has a problem.
+
+## Enter the Queue
+
+Service A drops a message into the queue: "Process order #4521." Done. Service A's work is complete.
+
+Service B reads from the queue at its own pace. If B is slow, messages queue up. If B crashes and restarts, it picks up where it left off. Service A never knew anything was wrong.
+
+## Key Properties
+
+**Durability** — messages are persisted, not lost if a service crashes.
+
+**At-least-once delivery** — most queues guarantee a message will be delivered at least once. Your consumer must handle duplicates (idempotency).
+
+**Backpressure** — the queue absorbs traffic spikes. B doesn't need to handle 10,000 orders per second if they come in bursts — it works through the queue at 500/second steadily.
+
+## Common Use Cases
+
+- Order processing
+- Sending emails and notifications
+- Webhook delivery
+- Data pipeline ingestion
+- Event-driven workflows between microservices
+
+## Popular Tools
+
+**Redis + BullMQ** — simple, fast, popular with Node.js.
+
+**RabbitMQ** — full-featured message broker with routing rules.
+
+**AWS SQS** — managed queue, scales automatically.
+
+**Kafka** — high-throughput event streaming at massive scale.

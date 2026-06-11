@@ -1,0 +1,39 @@
+Every time you visit a website, a small conversation happens between your browser and a server. That conversation follows a protocol called **HTTP** — HyperText Transfer Protocol.
+
+## Request and Response
+
+The cycle always has two parts:
+
+1. **Request** — your browser sends a message to the server: "Give me the page at `/`."
+2. **Response** — the server replies with HTML, CSS, JavaScript, or data.
+
+The request travels over the internet to a server, the server processes it, and the response travels back to your browser. The whole round-trip usually takes under 100 milliseconds.
+
+## Anatomy of a Request
+
+Every HTTP request has:
+
+- **Method** — what action to take (GET to fetch, POST to create, PUT to update, DELETE to remove)
+- **URL** — where to send the request
+- **Headers** — metadata like `Content-Type: application/json`
+- **Body** — data sent with the request (only for POST/PUT)
+
+## Status Codes
+
+The server's response always starts with a **status code** that tells your browser whether things went well:
+
+| Code | Meaning |
+|------|---------|
+| 200 | OK — it worked |
+| 201 | Created — a new resource was made |
+| 301 | Moved Permanently — the URL changed |
+| 400 | Bad Request — your request was malformed |
+| 401 | Unauthorized — you need to log in |
+| 404 | Not Found — the resource doesn't exist |
+| 500 | Server Error — something broke on the server |
+
+## Why This Matters
+
+Every feature in your app — fetching a list of users, submitting a form, loading an image — is an HTTP request. Understanding the cycle lets you debug network errors, design clean APIs, and reason about where things can go wrong.
+
+When your app is slow, the HTTP cycle is where you look first.

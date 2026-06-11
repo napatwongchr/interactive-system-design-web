@@ -1,0 +1,26 @@
+Your app handles 10 users fine. Then it goes viral. Something breaks. What is it?
+
+## The Usual Suspects
+
+When traffic spikes, systems fail in a predictable order:
+
+1. **Database** — almost always the first bottleneck. Queries that take 5ms at 10 users take 500ms at 1,000 concurrent users. Connection pools fill up. Queries queue.
+
+2. **Server memory** — each request consumes RAM. With 1,000 concurrent requests, your server might run out of memory and crash.
+
+3. **Server CPU** — if your code does heavy computation per request (image processing, complex queries, rendering), CPU maxes out.
+
+4. **External APIs** — rate limits from third-party services (payment processors, email providers) can queue or fail requests.
+
+## Reading the Signs
+
+| Symptom | Likely cause |
+|---------|-------------|
+| Slow responses, increasing over time | Database overload |
+| Sudden crashes, restarts | Out of memory |
+| 429 errors | Rate limiting |
+| Timeouts on specific endpoints | Slow queries or external calls |
+
+## The Good News
+
+These failure modes are well-understood. Every scaling technique — caching, indexing, load balancing — addresses one of them specifically. Knowing what breaks first tells you what to fix first.

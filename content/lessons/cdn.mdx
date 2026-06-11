@@ -1,0 +1,38 @@
+A CDN — Content Delivery Network — puts copies of your static files on servers around the world, close to your users.
+
+## The Problem It Solves
+
+Your server is in Virginia. A user in Tokyo loads your app. Every image, every JavaScript file travels across the Pacific. Latency adds up.
+
+A CDN has servers (called edge nodes or PoPs — Points of Presence) in Tokyo, Sydney, London, São Paulo. The user gets files from the nearest node, not your origin server.
+
+## What Gets Cached
+
+CDNs cache **static assets** — files that don't change per-user:
+
+- JavaScript bundles
+- CSS files
+- Images and fonts
+- Pre-built HTML pages (with Next.js static generation)
+
+## How It Works
+
+1. User requests `/logo.png`
+2. Request goes to the nearest CDN edge node
+3. If the node has it cached, it returns immediately
+4. If not, the CDN fetches from your origin, caches it, returns it
+5. The next user at that edge node gets it from cache
+
+## Cache-Control Headers
+
+You control CDN behavior with HTTP headers:
+
+```
+Cache-Control: public, max-age=31536000, immutable
+```
+
+This tells the CDN to cache the file for one year. For files with hash-based names (like `bundle.a3f2e1.js`), this is safe — the hash changes when the content changes.
+
+## Free CDN with Vercel
+
+If you deploy on Vercel, your static assets are automatically distributed to their edge network. You get CDN behavior for free.

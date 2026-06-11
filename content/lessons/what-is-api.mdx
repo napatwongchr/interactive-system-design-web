@@ -1,0 +1,22 @@
+An API — Application Programming Interface — is a structured way for one piece of software to talk to another.
+
+## The Restaurant Analogy
+
+Think of an API like a restaurant menu. You don't go into the kitchen and cook your own food. You look at the menu, place an order, and the kitchen returns what you asked for.
+
+Your frontend is the customer. The API is the menu and the waiter. The backend and database are the kitchen.
+
+## Why You Need One
+
+When 10 friends use your app, they're all sending requests to the same server at the same time. Without a structured API, chaos. With one, every client speaks the same language:
+
+- `GET /api/users` — list all users
+- `POST /api/users` — create a user
+- `GET /api/users/42` — get user 42
+- `DELETE /api/users/42` — delete user 42
+
+## REST vs Other Styles
+
+Most AI-generated apps use **REST** — each URL is a resource and HTTP methods say what to do with it. You might also encounter **GraphQL** (ask for exactly what you need) or **tRPC** (TypeScript type-safe calls without REST boilerplate).
+
+The style matters less than having a clear contract between frontend and backend.

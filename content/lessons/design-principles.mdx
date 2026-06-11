@@ -1,0 +1,39 @@
+System design is about making trade-offs. These principles help you make them deliberately.
+
+## Reliability
+
+The system works correctly even when things go wrong. Servers crash. Networks fail. Disks corrupt. A reliable system handles these gracefully.
+
+**How:** Replication, redundancy, retries with backoff, graceful degradation.
+
+## Scalability
+
+The system continues to work as load increases. What works at 100 users should work at 1,000,000.
+
+**How:** Horizontal scaling, caching, async processing, database sharding.
+
+## Maintainability
+
+Other engineers can understand, modify, and fix the system. This matters more than you think — most time in software is spent reading code, not writing it.
+
+**How:** Clear boundaries between components, good observability, simple over clever.
+
+## The CAP Theorem
+
+A distributed system can only guarantee two of three properties:
+
+- **Consistency** — every read returns the most recent write
+- **Availability** — every request receives a response
+- **Partition tolerance** — the system works even when parts can't communicate
+
+You must choose. Most real systems choose AP (available + partition tolerant) and accept eventual consistency.
+
+## Design for Failure
+
+Assume every component will fail. Design your system to fail gracefully rather than catastrophically.
+
+A circuit breaker stops calling a failing downstream service and returns a default response. A retry with exponential backoff handles transient failures. A timeout ensures you don't wait forever.
+
+## Observability First
+
+You can't fix what you can't see. Add structured logging, metrics, and tracing from day one. When something breaks at 3am, these are your only tools.

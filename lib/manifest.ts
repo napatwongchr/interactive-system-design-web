@@ -234,3 +234,7 @@ export function getPreviousLesson(lessonId: string): Lesson | null {
 export function getLessonsByChapter(chapterId: string): Lesson[] {
   return lessons.filter((l) => l.chapterId === chapterId).sort((a, b) => a.order - b.order)
 }
+
+export function getLessonById(id: string): Lesson | undefined {
+  return lessons.find((l) => l.id === id)
+}

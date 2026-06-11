@@ -1,0 +1,31 @@
+When your app needs more capacity, you have two choices: a bigger machine or more machines.
+
+## Vertical Scaling: Scale Up
+
+Replace your server with a more powerful one. More CPU cores. More RAM. Faster disk.
+
+**Pros:** Simple. No code changes. Works immediately.
+
+**Cons:** Expensive at the top end. Still a single point of failure. Has a hard ceiling — there's only so big a machine you can buy.
+
+## Horizontal Scaling: Scale Out
+
+Add more servers. Run multiple copies of your app behind a load balancer.
+
+**Pros:** No ceiling — add as many servers as you need. Redundancy — if one server dies, others keep running. Cheaper at scale — many small machines cost less than one giant one.
+
+**Cons:** More complex. Your app must be stateless (no in-memory state that only one server knows about). Requires a load balancer.
+
+## The Practical Reality
+
+Most apps start with vertical scaling — it's simpler. When you hit the ceiling (or the bill gets too high), you move to horizontal.
+
+The crossover point is usually around 10,000–100,000 users, depending on your workload.
+
+## What Makes Horizontal Scaling Hard
+
+**Session state** — if user A is logged in on server 1, and their next request goes to server 2, server 2 doesn't know about the session. Solution: store sessions in Redis, not in server memory.
+
+**File uploads** — if user uploads a file to server 1, server 2 can't serve it. Solution: store files in S3 or equivalent.
+
+**Cron jobs** — if you have a background job that runs on each server, it runs N times. Solution: use a proper job queue.

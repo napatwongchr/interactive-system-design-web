@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getLessonById, lessons } from '@/lib/manifest'
+import { LessonGate } from '@/components/LessonGate'
+import { LessonNav } from '@/components/LessonNav'
 
 export function generateStaticParams() {
   return lessons.map((l) => ({ lessonId: l.id }))
@@ -23,17 +25,20 @@ export default async function LessonPage({ params }: { params: Promise<{ lessonI
   const LessonContent = mdxModule.default
 
   return (
-    <main className="min-h-screen p-8 max-w-3xl mx-auto">
-      <header className="mb-8">
-        <p className="text-sm font-medium text-blue-600 uppercase tracking-wide">
-          {lesson.scaleMilestone}
-        </p>
-        <h1 className="text-3xl font-bold text-gray-900 mt-1">{lesson.title}</h1>
-        <p className="mt-2 text-gray-600">{lesson.summary}</p>
-      </header>
-      <article className="prose prose-lg prose-gray max-w-none">
-        <LessonContent />
-      </article>
-    </main>
+    <LessonGate lessonId={lessonId}>
+      <main className="min-h-screen p-8 max-w-3xl mx-auto">
+        <header className="mb-8">
+          <p className="text-sm font-medium text-blue-600 uppercase tracking-wide">
+            {lesson.scaleMilestone}
+          </p>
+          <h1 className="text-3xl font-bold text-gray-900 mt-1">{lesson.title}</h1>
+          <p className="mt-2 text-gray-600">{lesson.summary}</p>
+        </header>
+        <article className="prose prose-lg prose-gray max-w-none">
+          <LessonContent />
+        </article>
+        <LessonNav lessonId={lessonId} />
+      </main>
+    </LessonGate>
   )
 }

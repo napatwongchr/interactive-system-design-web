@@ -53,6 +53,9 @@ export function createLocalStorageProgress(): ProgressStore {
           if (next) p.currentLessonId = next.id
         }
         save(p)
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('lessonCompleted', { detail: { lessonId } }))
+        }
       }
     },
 

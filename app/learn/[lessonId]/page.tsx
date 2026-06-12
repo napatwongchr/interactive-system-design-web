@@ -26,7 +26,7 @@ export default async function LessonPage({ params }: { params: Promise<{ lessonI
 
   return (
     <LessonGate lessonId={lessonId}>
-      <main className="min-h-screen p-8 max-w-3xl mx-auto">
+      <main className="p-8 max-w-3xl mx-auto">
         <header className="mb-8">
           <p className="text-sm font-medium text-blue-600 uppercase tracking-wide">
             {lesson.scaleMilestone}

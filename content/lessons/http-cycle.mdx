@@ -1,39 +1,62 @@
-Every time you visit a website, a small conversation happens between your browser and a server. That conversation follows a protocol called **HTTP** — HyperText Transfer Protocol.
+You just shipped your first app. Someone types your URL and hits Enter.
 
-## Request and Response
+What happens in the next 100 milliseconds?
 
-The cycle always has two parts:
+That conversation — the one between your visitor's browser and your server — runs on a protocol called **HTTP** (HyperText Transfer Protocol). It's the language the whole web speaks.
 
-1. **Request** — your browser sends a message to the server: "Give me the page at `/`."
-2. **Response** — the server replies with HTML, CSS, JavaScript, or data.
+## The Two-Part Conversation
 
-The request travels over the internet to a server, the server processes it, and the response travels back to your browser. The whole round-trip usually takes under 100 milliseconds.
+Every HTTP interaction is exactly two messages: a **request** from the browser, and a **response** from the server. That's it. No session, no persistent connection — just ask and answer, over and over.
 
-## Anatomy of a Request
+Watch it happen:
 
-Every HTTP request has:
+<ArchDiagramStepper
+  nodes={[
+    { id: "browser", position: { x: 50, y: 100 }, data: { label: "Browser" }, step: 0 },
+    { id: "server", position: { x: 380, y: 100 }, data: { label: "Your Server" }, step: 1 }
+  ]}
+  edges={[
+    { id: "req", source: "browser", target: "server", label: "GET / HTTP/1.1", animated: true, step: 2 },
+    { id: "res", source: "server", target: "browser", label: "200 OK + HTML", animated: true, step: 3 }
+  ]}
+  height="220px"
+/>
 
-- **Method** — what action to take (GET to fetch, POST to create, PUT to update, DELETE to remove)
-- **URL** — where to send the request
-- **Headers** — metadata like `Content-Type: application/json`
-- **Body** — data sent with the request (only for POST/PUT)
+Step 1: Your server starts up, waiting. Step 2: Someone's browser sends a request — "Give me the page at `/`." Step 3: Your server sends back HTML and says "200 OK — here it is."
 
-## Status Codes
+## What's Inside a Request
 
-The server's response always starts with a **status code** that tells your browser whether things went well:
+Every request has three things:
+
+- **Method** — what action to take. `GET` means "give me data." `POST` means "here's some data, do something with it." `DELETE` means "remove this."
+- **URL** — where to send the request, like `/api/todos` or `/users/42`
+- **Headers** — metadata attached to the request, like what format the browser accepts (`Accept: application/json`)
+
+When you submit a form or click "Save," your app sends a `POST` request. When you load a page, it's a `GET`.
+
+## What's Inside a Response
+
+The server's reply always starts with a **status code** — a three-digit number that tells the browser what happened:
 
 | Code | Meaning |
 |------|---------|
-| 200 | OK — it worked |
-| 201 | Created — a new resource was made |
-| 301 | Moved Permanently — the URL changed |
-| 400 | Bad Request — your request was malformed |
-| 401 | Unauthorized — you need to log in |
-| 404 | Not Found — the resource doesn't exist |
-| 500 | Server Error — something broke on the server |
+| 200 | OK — everything worked |
+| 201 | Created — a new thing was made |
+| 301 | Moved — the URL changed permanently |
+| 400 | Bad Request — the browser sent something garbled |
+| 401 | Unauthorized — you need to be logged in |
+| 404 | Not Found — nothing exists at that URL |
+| 500 | Server Error — something broke on your end |
 
-## Why This Matters
+When your app crashes and you see a blank screen, somewhere there's a `500` response. When you mistype a URL, there's a `404`.
 
-Every feature in your app — fetching a list of users, submitting a form, loading an image — is an HTTP request. Understanding the cycle lets you debug network errors, design clean APIs, and reason about where things can go wrong.
+## Why This Matters to You
 
-When your app is slow, the HTTP cycle is where you look first.
+Every single feature in your vibe-coded app is HTTP under the hood:
+
+- **Loading a page** → `GET /`
+- **Fetching your todos** → `GET /api/todos`
+- **Saving a new item** → `POST /api/items`
+- **Deleting a record** → `DELETE /api/items/42`
+
+When something isn't working, the HTTP cycle is the first place to look. Open your browser's DevTools, click the Network tab, and you can see every single request and response your app is making. Slow requests, failed requests, wrong data — it's all there.

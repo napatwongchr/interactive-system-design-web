@@ -1,28 +1,62 @@
-You shipped an app. Someone uses it. What actually happens?
+You click "Save." A spinner appears, then your item shows up in the list.
 
-## From Click to Database
+That took maybe 200 milliseconds. In that time, your click traveled from your browser across the internet, hit a server, was validated, turned into a database query, saved to disk, and the confirmation traveled back — all before you finished reading this sentence.
 
-When a user clicks "Save" in your AI-generated app:
+Let's trace it step by step.
 
-1. The frontend sends a `POST /api/items` request with the data
-2. Your backend receives the request and validates the input
-3. The backend runs a `INSERT INTO items ...` query against the database
-4. The database writes the row and returns the new ID
-5. The backend sends a `200 OK` response with the saved item
-6. The frontend updates the UI
+## The Journey of One Click
 
-## What the AI Generated
+<ArchDiagramStepper
+  nodes={[
+    { id: "browser", position: { x: 20, y: 100 }, data: { label: "Your App (Browser)" }, step: 0 },
+    { id: "api", position: { x: 280, y: 100 }, data: { label: "API Route (Server)" }, step: 1 },
+    { id: "db", position: { x: 540, y: 100 }, data: { label: "Database" }, step: 2 }
+  ]}
+  edges={[
+    { id: "req", source: "browser", target: "api", label: "POST /api/items", animated: true, step: 1 },
+    { id: "query", source: "api", target: "db", label: "INSERT INTO items", animated: true, step: 2 },
+    { id: "dbres", source: "db", target: "api", label: "new row ID", animated: true, step: 3 },
+    { id: "apires", source: "api", target: "browser", label: "200 OK + saved item", animated: true, step: 3 }
+  ]}
+  height="240px"
+/>
 
-AI tools generate this stack automatically. The names might differ, but the structure is the same:
+Here's what each step actually means:
 
-- **Route handlers** — functions that respond to specific URLs
-- **ORM queries** — code that talks to the database without raw SQL
-- **Environment variables** — secrets like `DATABASE_URL` kept out of your code
+1. **Your React component** calls `fetch('/api/items', { method: 'POST', body: ... })`. That's the browser sending an HTTP request to your backend.
+2. **Your API route** (an `app/api/items/route.ts` file or an Express handler) receives the request, reads the body, and validates it. If the data looks wrong, it sends back a `400 Bad Request` and stops here.
+3. **The API route runs a query** — something like `db.insert(items).values(...)` — against the database.
+4. **The database** writes a new row and returns the ID of the new record.
+5. **The API route** wraps that ID and the saved data into a JSON response and sends `200 OK` back to the browser.
+6. **Your React component** receives the response, updates state, and re-renders. The spinner disappears. Your item appears.
 
-## Common Confusion Points
+## What the AI Generated, Explained
 
-**"It works on my machine"** — Your local machine runs all three layers together. In production they're separate services.
+You probably have files you've never fully read. Here's what they actually do:
 
-**Serverless functions** — These are just backend functions that start on demand. Same three-layer model, different deployment.
+**Route handlers** (`app/api/*/route.ts` or `pages/api/*.ts`) — These are your backend. Each file handles HTTP requests to a specific URL. The AI created one for every CRUD operation your app needs.
 
-**The database isn't in your code** — Your code talks to the database over a network connection. The data lives somewhere else entirely.
+**ORM queries** (`db.select()`, `prisma.user.findMany()`, etc.) — These are your database calls. An ORM (Object-Relational Mapper) is a library that translates JavaScript objects into SQL queries. You write JavaScript; it writes SQL.
+
+**Environment variables** (`DATABASE_URL`, `NEXTAUTH_SECRET`, etc.) — These are secrets and configuration values stored outside your code. On your machine they live in a `.env.local` file. In production they're set on the server. They never get committed to Git.
+
+## "It Works on My Machine"
+
+The most common confusion when you first deploy: everything worked locally, now it's broken.
+
+Here's why: on your machine, all three layers run together. Your browser, your API routes, and your database are all on the same computer, often all in the same terminal process.
+
+In production, they're separate:
+- Your frontend is probably served from a CDN (a network of servers around the world)
+- Your API runs on a server in one specific location
+- Your database is its own managed service somewhere else entirely
+
+They communicate over the network — the same HTTP protocol you just learned about. When your app breaks in production, it's usually because one of these connections isn't configured correctly (wrong `DATABASE_URL`, missing environment variable, CORS policy blocking requests).
+
+## Serverless Functions Are Still Backends
+
+If your app uses Vercel Functions, AWS Lambda, or Next.js App Router server components, you're using **serverless functions** — backend code that runs on demand instead of on a permanently-running server.
+
+Same three-layer model. Same HTTP protocol. Just a different deployment style. The function starts when a request arrives, handles it, and then stops. The database is still separate, still persistent, still the source of truth.
+
+Your mental model doesn't change.

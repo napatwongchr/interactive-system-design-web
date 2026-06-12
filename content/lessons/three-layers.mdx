@@ -1,24 +1,44 @@
-Your app has three distinct layers, each with a different job.
+When you vibe-coded your app, you probably didn't sit down and think "I'll build a frontend, a backend, and a database." You just started building. But the AI did think about it — because every app, no matter how it was built, follows this same structure.
+
+Your app has three layers.
 
 ## The Three Layers
 
-**Frontend** — what the user sees and interacts with. Runs in the browser. Built with HTML, CSS, and JavaScript. Your React or Vue app lives here.
+<ArchDiagramStepper
+  nodes={[
+    { id: "frontend", position: { x: 200, y: 20 }, data: { label: "Frontend (Browser)" }, step: 0 },
+    { id: "backend", position: { x: 200, y: 150 }, data: { label: "Backend (Server)" }, step: 1 },
+    { id: "database", position: { x: 200, y: 280 }, data: { label: "Database" }, step: 2 }
+  ]}
+  edges={[
+    { id: "fb", source: "frontend", target: "backend", label: "HTTP requests", animated: true, step: 1 },
+    { id: "bd", source: "backend", target: "database", label: "queries", animated: true, step: 2 }
+  ]}
+  height="340px"
+/>
 
-**Backend** — where the logic lives. Runs on a server. Handles requests from the frontend, applies business rules, and talks to the database.
+**Frontend** is everything your user sees and touches. It runs in the browser — HTML, CSS, and JavaScript rendering the interface. Your React or Next.js components live here. The frontend never talks directly to the database. It only talks to the backend.
 
-**Database** — where the data lives. Stores everything persistently. The backend reads from and writes to it.
+**Backend** is where decisions happen. It runs on a server (or a serverless function). It receives requests from the frontend, checks if they're valid, applies your app's rules, and reads or writes data. The backend is the gatekeeper.
 
-## Why Separate Them?
+**Database** is where data lives permanently. Turn off the server and the database still holds everything. The backend reads from it and writes to it using queries — but users never talk to it directly.
 
-Each layer can be scaled independently. Your frontend can be served from a CDN globally while your backend runs on a few servers and your database runs on one powerful machine.
+## Why Three Separate Layers?
 
-Each layer also has a clear responsibility. The frontend doesn't store data. The backend doesn't render HTML. The database doesn't run business logic.
+You could technically put everything in one place. Some very simple apps do. But separating the layers gives you three big wins:
 
-## What Your Vibe-Coded App Looks Like
+**Security.** Your database is never exposed to the internet. Only your backend can reach it. That's why you don't put your database password in your frontend code (if you've done this — change it now, seriously).
 
-Most AI-generated apps follow this pattern:
-- A React frontend on Vercel
-- An Express or Next.js API on a cloud server
-- A Postgres or SQLite database
+**Independence.** Each layer can change without breaking the others. You can rebuild your entire React frontend and the backend doesn't care. You can swap your Postgres database for something else and the frontend never notices.
 
-The layers are there even if you didn't consciously design them.
+**Scale.** Layers that get overloaded can be scaled separately. If your backend is struggling, you add more backend servers. You don't have to scale the database at the same time.
+
+## What the AI Built for You
+
+When you used Cursor or v0 or Claude to build your app, it generated this structure automatically. The names might vary, but the pattern is always the same:
+
+- **A React app** (frontend) — renders your UI in the browser
+- **API routes or an Express server** (backend) — handles `/api/*` requests
+- **A Postgres, SQLite, or Firebase database** (database) — stores your data
+
+Even if your whole app is in one Next.js project, those three responsibilities are still there — just organized into different folders. The three layers are a logical separation, not always a physical one.

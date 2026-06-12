@@ -11,16 +11,59 @@ export interface Chapter {
   id: string
   title: string
   scaleMilestone: string
+  description: string
   order: number
 }
 
 export const chapters: Chapter[] = [
-  { id: 'chapter-1', title: 'You Just Shipped', scaleMilestone: '1 user', order: 1 },
-  { id: 'chapter-2', title: '10 Friends Use It', scaleMilestone: '10 users', order: 2 },
-  { id: 'chapter-3', title: 'It Goes Viral', scaleMilestone: '1,000 users', order: 3 },
-  { id: 'chapter-4', title: 'You Fix It', scaleMilestone: '10,000 users', order: 4 },
-  { id: 'chapter-5', title: 'You Scale It', scaleMilestone: '100,000 users', order: 5 },
-  { id: 'chapter-6', title: 'You Design It Right', scaleMilestone: 'Design it right', order: 6 },
+  {
+    id: 'chapter-1',
+    title: 'You Just Shipped',
+    scaleMilestone: '1 user',
+    description:
+      'Your first app is live. Trace exactly what happens when someone visits it — from browser to server and back.',
+    order: 1,
+  },
+  {
+    id: 'chapter-2',
+    title: '10 Friends Use It',
+    scaleMilestone: '10 users',
+    description:
+      'Ten people are using your app now. Time to learn why APIs exist and how to keep secrets out of your code.',
+    order: 2,
+  },
+  {
+    id: 'chapter-3',
+    title: 'It Goes Viral',
+    scaleMilestone: '1,000 users',
+    description:
+      'Traffic spikes and things start breaking. Discover which parts of your stack buckle first and how to read the evidence.',
+    order: 3,
+  },
+  {
+    id: 'chapter-4',
+    title: 'You Fix It',
+    scaleMilestone: '10,000 users',
+    description:
+      'Armed with a diagnosis, you apply the fixes: caching, CDNs, database indexes, and async jobs.',
+    order: 4,
+  },
+  {
+    id: 'chapter-5',
+    title: 'You Scale It',
+    scaleMilestone: '100,000 users',
+    description:
+      'Traffic keeps climbing. Learn the big architectural moves: load balancers, horizontal scaling, and message queues.',
+    order: 5,
+  },
+  {
+    id: 'chapter-6',
+    title: 'You Design It Right',
+    scaleMilestone: 'Design it right',
+    description:
+      'Now that you have been through the chaos, learn to design systems before the problems start.',
+    order: 6,
+  },
 ]
 
 export const lessons: Lesson[] = [
@@ -237,4 +280,8 @@ export function getLessonsByChapter(chapterId: string): Lesson[] {
 
 export function getLessonById(id: string): Lesson | undefined {
   return lessons.find((l) => l.id === id)
+}
+
+export function getChapterById(id: string): Chapter | undefined {
+  return chapters.find((c) => c.id === id)
 }

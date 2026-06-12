@@ -1,31 +1,69 @@
-When your app needs more capacity, you have two choices: a bigger machine or more machines.
+Your single server is maxed out. You need more capacity.
+
+You open your cloud provider's console. Two options stare back at you: upgrade to a bigger machine, or add more machines.
+
+These are the two fundamental ways to scale. Each has a different cost, a different ceiling, and a different set of problems.
 
 ## Vertical Scaling: Scale Up
 
-Replace your server with a more powerful one. More CPU cores. More RAM. Faster disk.
+Upgrade your existing server to a more powerful one. More CPU cores. More RAM. Faster disks.
 
-**Pros:** Simple. No code changes. Works immediately.
+<ArchDiagramStepper
+  nodes={[
+    { id: "small", position: { x: 100, y: 130 }, data: { label: "4 CPU / 8GB RAM" }, step: 0 },
+    { id: "big", position: { x: 420, y: 130 }, data: { label: "32 CPU / 128GB RAM" }, step: 1 }
+  ]}
+  edges={[
+    { id: "upgrade", source: "small", target: "big", label: "scale up →", animated: true, step: 1 }
+  ]}
+  height="200px"
+/>
 
-**Cons:** Expensive at the top end. Still a single point of failure. Has a hard ceiling — there's only so big a machine you can buy.
+**What's good:** Zero code changes. Works immediately. No new infrastructure to manage. Your app doesn't need to know anything is different.
+
+**What's bad:** Expensive at the top end. Still one machine — if it dies, your app is down. Every server has a hard ceiling — you can only buy so much hardware.
+
+Most apps start here. It's often the right answer until you hit the ceiling.
 
 ## Horizontal Scaling: Scale Out
 
-Add more servers. Run multiple copies of your app behind a load balancer.
+Add more servers and distribute traffic with a load balancer.
 
-**Pros:** No ceiling — add as many servers as you need. Redundancy — if one server dies, others keep running. Cheaper at scale — many small machines cost less than one giant one.
+<ArchDiagramStepper
+  nodes={[
+    { id: "lb", position: { x: 80, y: 130 }, data: { label: "Load Balancer" }, step: 0 },
+    { id: "s1", position: { x: 320, y: 60 }, data: { label: "Server (4 CPU)" }, step: 1 },
+    { id: "s2", position: { x: 320, y: 130 }, data: { label: "Server (4 CPU)" }, step: 1 },
+    { id: "s3", position: { x: 320, y: 200 }, data: { label: "Server (4 CPU)" }, step: 1 },
+    { id: "db", position: { x: 540, y: 130 }, data: { label: "Database" }, step: 2 }
+  ]}
+  edges={[
+    { id: "r1", source: "lb", target: "s1", animated: true, step: 1 },
+    { id: "r2", source: "lb", target: "s2", animated: true, step: 1 },
+    { id: "r3", source: "lb", target: "s3", animated: true, step: 1 },
+    { id: "d", source: "s2", target: "db", animated: true, step: 2 }
+  ]}
+  height="270px"
+/>
 
-**Cons:** More complex. Your app must be stateless (no in-memory state that only one server knows about). Requires a load balancer.
+**What's good:** No ceiling — add as many servers as you need. Redundancy — one server dying doesn't take down the app. Cost-effective at scale — many small machines are cheaper than one giant one.
+
+**What's bad:** More complex to manage. Your servers must be **stateless** (more on this in the next lesson). Requires a load balancer. Introduces distributed systems problems.
 
 ## The Practical Reality
 
-Most apps start with vertical scaling — it's simpler. When you hit the ceiling (or the bill gets too high), you move to horizontal.
+Most apps scale vertically until it hurts, then move to horizontal.
 
-The crossover point is usually around 10,000–100,000 users, depending on your workload.
+The crossover point depends on your workload, but it's typically somewhere between 10,000 and 100,000 users. Before that, the complexity of horizontal scaling isn't worth the trouble.
 
 ## What Makes Horizontal Scaling Hard
 
-**Session state** — if user A is logged in on server 1, and their next request goes to server 2, server 2 doesn't know about the session. Solution: store sessions in Redis, not in server memory.
+**Sessions** — if a user logs in on Server 1, Server 2 doesn't know about their session. Fix: store sessions in Redis, not in server memory.
 
-**File uploads** — if user uploads a file to server 1, server 2 can't serve it. Solution: store files in S3 or equivalent.
+**File uploads** — a file uploaded to Server 1 can't be served by Server 2. Fix: store files in S3 or equivalent object storage.
 
-**Cron jobs** — if you have a background job that runs on each server, it runs N times. Solution: use a proper job queue.
+**Cron jobs** — if you have a scheduled job that runs on each server, it runs 3× with 3 servers. Fix: use a proper job queue with a single worker.
+
+**In-memory caches** — each server has its own cache, they can diverge. Fix: use Redis as a shared cache.
+
+These aren't dealbreakers — they're solvable. But they require thought. The next lesson covers how to design your servers so horizontal scaling becomes trivial.

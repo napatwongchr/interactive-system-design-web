@@ -1,25 +1,60 @@
-Every server has finite resources. Understanding those limits helps you predict when your app will break.
+You're looking at your monitoring. CPU is at 95%. Memory is at 87%. New requests are timing out.
+
+Your server isn't broken — it's just full.
+
+Every server has finite resources, and understanding what those resources are tells you exactly what's happening when things go wrong.
+
+## The Three Resources
+
+<ArchDiagramStepper
+  nodes={[
+    { id: "cpu", position: { x: 80, y: 60 }, data: { label: "CPU" }, step: 0 },
+    { id: "memory", position: { x: 300, y: 60 }, data: { label: "Memory (RAM)" }, step: 1 },
+    { id: "connections", position: { x: 520, y: 60 }, data: { label: "Connections" }, step: 2 },
+    { id: "server", position: { x: 300, y: 220 }, data: { label: "Your Server" }, step: 0 }
+  ]}
+  edges={[
+    { id: "c1", source: "cpu", target: "server", animated: true, step: 0 },
+    { id: "c2", source: "memory", target: "server", animated: true, step: 1 },
+    { id: "c3", source: "connections", target: "server", animated: true, step: 2 }
+  ]}
+  height="290px"
+/>
 
 ## CPU
 
-The CPU executes your code. A single CPU core can only do one thing at a time. Node.js is single-threaded — it handles many requests by switching between them rapidly, but it can only run one at a time.
+The CPU executes your code. More requests = more code executing = more CPU usage.
 
-CPU-bound code (complex calculations, JSON parsing of large payloads, image resizing) blocks that thread. Everything waits.
+Node.js is single-threaded: it can only run one piece of JavaScript at a time. It handles many requests by switching between them quickly during I/O waits — "I'm waiting for the database, let me handle this other request while I wait."
+
+This works brilliantly for I/O-bound code (database queries, HTTP calls). It breaks down for **CPU-bound code**: resizing images, parsing huge JSON files, running complex algorithms. Those operations block the thread. While your server resizes one image, 50 other requests pile up waiting.
+
+**The fix:** offload CPU-heavy work to background jobs (you'll learn this in Chapter 4).
 
 ## Memory
 
-RAM stores your in-progress work: request data, cached values, open database connections. When memory fills up, the operating system starts swapping to disk (slow) or the process crashes.
+RAM stores your active work: request data, cached values, open connections, in-progress operations.
 
-Memory leaks — where code holds references to objects it no longer needs — are a common cause of slow memory growth.
+Every concurrent request consumes some memory. If 500 users are simultaneously loading a page that serves 2MB of data each, that's 1GB of active data in RAM. If your server only has 512MB, it crashes.
+
+Memory leaks are sneaky: code that holds references to objects it no longer needs. Your app might handle 1,000 requests just fine but crash after 10,000 because memory is accumulating that never gets freed.
+
+**The fix:** monitor memory over time, not just at peak. Restart workers periodically in production if you suspect leaks.
 
 ## Connections
 
-Your server has a limited number of file descriptors — essentially, open connections. Each open HTTP connection, each database connection, each file read consumes one.
+Database connections are the most commonly exhausted resource.
 
-Database connection pools (usually 10–100 connections) are the most common bottleneck. If all connections are in use, new requests wait.
+Your server maintains a **connection pool** — a fixed set of open connections to the database, typically 10–100. Each active query needs one connection. If all connections are in use, new queries wait.
 
-## Concurrency
+At 1,000 concurrent requests, each waiting for a database response, your 20-connection pool has 20 queries running and 980 waiting. The waiters keep arriving. The pool never empties. Everything grinds to a halt.
 
-A Node.js server can handle thousands of concurrent requests because I/O (waiting for the database, waiting for a file) is non-blocking. But if every request is CPU-bound, you max out quickly.
+**The fix:** cache repeated queries so fewer hit the database. Use connection poolers like PgBouncer for high-concurrency workloads.
 
-The rule: servers are good at I/O-bound work. Offload CPU-bound work to background jobs.
+## The Node.js Rule
+
+Servers excel at I/O-bound work. They're bad at CPU-bound work.
+
+Design your API routes to be thin: receive a request, query the database, return a response. Don't do heavy computation in the request handler. Your database can handle that better — or hand it off to a background job.
+
+If your endpoints are slow and the database looks fine, the bottleneck is probably CPU. If everything is slow and queries are fast, it's probably memory or connections.

@@ -1,43 +1,76 @@
-Some tasks take too long to do during a web request. Async operations move them off the request path.
+A user signs up for your app. The signup form submits. Two seconds later, the page finally loads.
 
-## The Problem
+Two seconds is an eternity. Users expect 200ms. Where did those 2 seconds go?
 
-A user submits a form. Your server needs to:
-1. Save the data to the database
-2. Send a welcome email
-3. Process an uploaded image
-4. Update some analytics
+You look at the code. After saving the user to the database (fast), your server sends a welcome email, resizes their profile picture, and updates an analytics summary. Each one takes 400–600ms. They all run one after another.
 
-Steps 2–4 each take 200–500ms. The user waits 1–2 seconds for the page to load. That's too slow.
+The user waited while your server did work they couldn't see and didn't need before continuing.
 
-## The Solution: Background Jobs
+That's what async operations fix.
 
-Do the minimum required to respond, then do the rest asynchronously:
+## Synchronous vs Asynchronous
 
-1. Save to database — 20ms
-2. Enqueue a "send welcome email" job — 5ms
-3. Respond to the user — total: 25ms
+**Synchronous**: do everything before responding. The user waits for all of it.
 
-A background worker picks up the job and sends the email while the user is already on the next page.
+**Asynchronous**: do the minimum required, respond immediately, finish the rest in the background.
 
-## Queue Patterns
+<ArchDiagramStepper
+  nodes={[
+    { id: "user", position: { x: 40, y: 130 }, data: { label: "User" }, step: 0 },
+    { id: "server", position: { x: 230, y: 130 }, data: { label: "Server" }, step: 1 },
+    { id: "queue", position: { x: 440, y: 60 }, data: { label: "Job Queue" }, step: 2 },
+    { id: "worker", position: { x: 440, y: 220 }, data: { label: "Background Worker" }, step: 3 },
+    { id: "email", position: { x: 640, y: 60 }, data: { label: "Email Service" }, step: 3 }
+  ]}
+  edges={[
+    { id: "signup", source: "user", target: "server", label: "POST /signup", animated: true, step: 1 },
+    { id: "enqueue", source: "server", target: "queue", label: "enqueue: send-email", animated: true, step: 2 },
+    { id: "respond", source: "server", target: "user", label: "200 OK (25ms)", animated: true, step: 2 },
+    { id: "work", source: "queue", target: "worker", label: "pick up job", animated: true, step: 3 },
+    { id: "send", source: "worker", target: "email", label: "send email", animated: true, step: 3 }
+  ]}
+  height="280px"
+/>
 
-**Simple queue** — jobs are processed in order. Works for most cases.
-
-**Priority queue** — urgent jobs jump the line. Used for time-sensitive work.
-
-**Retry with backoff** — if a job fails (email service is down), try again in 1 minute, then 5, then 30. Don't just fail silently.
-
-## Tools
-
-- **BullMQ** — Redis-backed job queue for Node.js
-- **Inngest** — serverless-friendly event-driven jobs
-- **Trigger.dev** — background jobs with a nice developer experience
+Step 1: User submits signup. Step 2: Server saves to DB and enqueues a job — then responds in 25ms. Step 3: Background worker picks up the job and sends the email while the user is already on the next page.
 
 ## What to Move Off the Request Path
 
-- Sending emails or notifications
-- Image/video processing
-- Generating reports or exports
-- Syncing to external services
-- Anything that calls a slow API
+Ask yourself: does the user need this to happen before they see the next screen?
+
+**No — move to background:**
+- Sending welcome emails or notifications
+- Resizing or processing uploaded images
+- Generating PDF reports or data exports
+- Syncing data to external services (analytics, CRMs)
+- Anything that calls a slow external API
+
+**Yes — keep synchronous:**
+- Saving the user's input to the database
+- Validating the request
+- Checking permissions
+- Returning the result they're directly waiting for
+
+## The Job Queue Pattern
+
+A **job queue** is a list of pending background tasks, usually backed by Redis.
+
+Your server adds jobs to the queue. One or more **workers** (separate processes) read from the queue and execute the jobs.
+
+If a job fails (email service is down), the queue retries it automatically — after 1 minute, then 5 minutes, then 30 minutes. You don't silently drop work.
+
+If your workers are overloaded, jobs pile up in the queue rather than crashing your server. The queue acts as a buffer.
+
+## Tools for Node.js
+
+- **BullMQ** — Redis-backed, mature, feature-rich. Good default choice.
+- **Inngest** — serverless-friendly, great for Next.js apps. Jobs defined as functions.
+- **Trigger.dev** — built for developer experience, with a dashboard for monitoring jobs.
+
+Pick one that matches your deployment style. If you're on Vercel, Inngest fits well. If you have a persistent server, BullMQ with Redis.
+
+## The Two-Second Problem, Fixed
+
+With async jobs: save user to DB (20ms) → enqueue welcome email job (5ms) → respond (25ms total).
+
+The user sees the confirmation page in under 100ms. The email arrives in their inbox 3 seconds later. Nobody is waiting on nobody.

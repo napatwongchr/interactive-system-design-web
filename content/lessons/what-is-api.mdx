@@ -1,22 +1,58 @@
-An API — Application Programming Interface — is a structured way for one piece of software to talk to another.
+Your app has been live for a week. Your 10 friends are using it. Everything worked fine when it was just you — but now Alice wants to see Bob's posts, Bob wants to update his profile, and you want to add a mobile app later.
+
+How does data move around without everything turning into spaghetti?
+
+That's what an API solves.
+
+## A Structured Contract
+
+An **API** (Application Programming Interface) is a formal agreement between two pieces of software about how they'll talk to each other.
+
+Without an API, your frontend would need to know exactly how your database is structured — every table, every column. Change the database and your whole UI breaks.
+
+With an API, the frontend only knows one thing: "send a request to `/api/posts`, get back a list of posts." The database can change completely behind the scenes.
 
 ## The Restaurant Analogy
 
-Think of an API like a restaurant menu. You don't go into the kitchen and cook your own food. You look at the menu, place an order, and the kitchen returns what you asked for.
+Think of it like a restaurant. You're the customer (frontend). The kitchen is the database. The waiter — the one who takes your order, goes to the kitchen, and brings back food — is the API.
 
-Your frontend is the customer. The API is the menu and the waiter. The backend and database are the kitchen.
+You never walk into the kitchen. You don't need to know how they cook. You just read the menu (the API contract) and order.
 
-## Why You Need One
+<ArchDiagramStepper
+  nodes={[
+    { id: "browser", position: { x: 60, y: 120 }, data: { label: "Browser (You)" }, step: 0 },
+    { id: "api", position: { x: 300, y: 120 }, data: { label: "API (Waiter)" }, step: 1 },
+    { id: "db", position: { x: 540, y: 120 }, data: { label: "Database (Kitchen)" }, step: 2 }
+  ]}
+  edges={[
+    { id: "req", source: "browser", target: "api", label: "GET /api/posts", animated: true, step: 1 },
+    { id: "query", source: "api", target: "db", label: "SELECT * FROM posts", animated: true, step: 2 },
+    { id: "rows", source: "db", target: "api", label: "rows", animated: true, step: 3 },
+    { id: "json", source: "api", target: "browser", label: "200 OK + JSON", animated: true, step: 3 }
+  ]}
+  height="240px"
+/>
 
-When 10 friends use your app, they're all sending requests to the same server at the same time. Without a structured API, chaos. With one, every client speaks the same language:
+Step 1: The browser. Step 2: It sends a request to the API. Step 3: The API queries the database. Step 4: Data comes back as JSON, ready to display.
 
-- `GET /api/users` — list all users
-- `POST /api/users` — create a user
-- `GET /api/users/42` — get user 42
-- `DELETE /api/users/42` — delete user 42
+## REST: The Default Style
 
-## REST vs Other Styles
+Most vibe-coded apps use **REST** — each URL is a resource, and the HTTP method tells the API what to do with it:
 
-Most AI-generated apps use **REST** — each URL is a resource and HTTP methods say what to do with it. You might also encounter **GraphQL** (ask for exactly what you need) or **tRPC** (TypeScript type-safe calls without REST boilerplate).
+| Method | URL | What it does |
+|--------|-----|-------------|
+| GET | `/api/posts` | Get all posts |
+| GET | `/api/posts/42` | Get post #42 |
+| POST | `/api/posts` | Create a new post |
+| PUT | `/api/posts/42` | Update post #42 |
+| DELETE | `/api/posts/42` | Delete post #42 |
 
-The style matters less than having a clear contract between frontend and backend.
+When Cursor or v0 generated your app, it created these URL patterns automatically. The files in `app/api/` or `pages/api/` are your API.
+
+## Why the Separation Matters
+
+Right now, with 10 users, you could get away without a clean API. But at 10,000 users — or when you build a mobile app — having a clear contract between frontend and backend is what keeps you sane.
+
+Your frontend doesn't care how the database stores data. Your mobile app uses the same API as your web app. Your backend can change its database without breaking anything.
+
+The API is the handshake that makes all of this possible.

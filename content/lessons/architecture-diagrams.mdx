@@ -1,37 +1,73 @@
-Architecture diagrams communicate how your system fits together. They're the shared language of system design.
+A new engineer joins your team. You want to explain how your app works.
 
-## Why Draw Diagrams
+You could start with the code — "so in `app/api/posts/route.ts` we have..." — but 20 minutes in you're both lost in details and they still don't understand the big picture.
 
-Complex systems can't fit in one person's head. Diagrams externalize the structure so a team can reason about it together.
+Or you could draw a diagram in 5 minutes that shows: "here's the browser, here's our API, here's the database, here's Redis for caching, here's our email service." Everything clicks.
 
-A good diagram answers: what components exist, how they communicate, and where the boundaries are.
+Architecture diagrams are the shared language of system design. This lesson teaches you to read and draw them.
 
-## The C4 Model
+## What a Good Diagram Shows
 
-A useful framework for thinking about system diagrams at different levels:
+A diagram answers three questions:
+1. What components exist?
+2. How do they communicate?
+3. Where are the boundaries?
 
-**System Context** — your system and the users/external systems it interacts with. No internal details. Answers: what does this system do?
+It does not need to show every function, every file, or every edge case. It needs to communicate the structure at a useful level of detail.
 
-**Container** — the major technical building blocks (web app, API server, database, Redis). Answers: what runs where?
+<ArchDiagramStepper
+  nodes={[
+    { id: "browser", position: { x: 40, y: 130 }, data: { label: "Browser" }, step: 0 },
+    { id: "cdn", position: { x: 220, y: 60 }, data: { label: "CDN" }, step: 1 },
+    { id: "api", position: { x: 220, y: 200 }, data: { label: "API Server" }, step: 2 },
+    { id: "redis", position: { x: 440, y: 130 }, data: { label: "Redis" }, step: 3 },
+    { id: "db", position: { x: 440, y: 240 }, data: { label: "Database" }, step: 3 },
+    { id: "queue", position: { x: 440, y: 30 }, data: { label: "Job Queue" }, step: 4 },
+    { id: "worker", position: { x: 640, y: 30 }, data: { label: "Worker" }, step: 4 }
+  ]}
+  edges={[
+    { id: "static", source: "browser", target: "cdn", label: "static assets", animated: true, step: 1 },
+    { id: "api", source: "browser", target: "api", label: "API calls", animated: true, step: 2 },
+    { id: "cache", source: "api", target: "redis", label: "cache", animated: true, step: 3 },
+    { id: "query", source: "api", target: "db", label: "queries", animated: true, step: 3 },
+    { id: "enqueue", source: "api", target: "queue", label: "jobs", animated: true, step: 4 },
+    { id: "work", source: "queue", target: "worker", animated: true, step: 4 }
+  ]}
+  height="320px"
+/>
 
-**Component** — the major components inside a container. Answers: how is this container structured?
+This is a complete picture of a production app. Browser → CDN for static files, Browser → API for data, API → Redis for caching, API → Database for storage, API → Queue → Worker for background jobs.
 
-**Code** — class diagrams, sequence diagrams. Rarely needed except for complex algorithms.
-
-## Common Symbols
+## The Common Symbols
 
 No universal standard, but these are widely understood:
 
-- **Rectangle** — a component or service
-- **Cylinder** — a database
-- **Arrow** — communication, labeled with the protocol (HTTP, TCP, SQL)
-- **Cloud** — external system or the internet
-- **Dashed box** — a boundary or group
+- **Rectangle** — a service, server, or component
+- **Cylinder** — a database (Postgres, MySQL, SQLite)
+- **Dashed rectangle** — a boundary or logical group (e.g., "runs in the cloud")
+- **Arrow** — communication, labeled with protocol: `HTTP/JSON`, `TCP`, `Redis RESP`
+- **Cloud shape** — an external system or the internet
 
-## Practical Tips
+Label your arrows. An arrow without a label is ambiguous — does this call happen synchronously? Is it an event? What protocol?
 
-Draw the simplest diagram that communicates what you need. Don't show every component — show the ones relevant to the decision you're making.
+## Zoom Levels
 
-Use tools like Excalidraw, Mermaid, or draw.io. Keep diagrams in your repo next to the code — they rot less that way.
+The C4 model provides a useful framework for choosing the right level of detail:
 
-Label your arrows with the important details: `HTTP/JSON`, `Postgres TCP`, `Redis RESP`.
+**System Context** — your system as a black box, surrounded by users and external systems. "This is what our app does and what it talks to."
+
+**Container** — the major technical pieces: web app, API, database, Redis, workers. "This is how our app is built."
+
+**Component** — the internals of one container: the auth module, the billing service, the recommendations engine. "This is how this part works."
+
+Start at the Container level. It's usually the most useful for understanding a system quickly.
+
+## The Practical Rules
+
+**Draw the simplest diagram that answers the question you're trying to answer.** If you're deciding whether to add a cache, draw the current data flow and where the cache would sit. Don't include the CDN or the workers — they're not relevant to the decision.
+
+**Keep diagrams in your repo.** Diagrams stored in Notion or Confluence drift from the code and become wrong. A `docs/architecture.md` with an embedded Mermaid diagram stays next to the code and gets updated when the code changes.
+
+**Use tools you'll actually use.** Excalidraw for quick sketches, Mermaid for version-controlled diagrams in markdown, draw.io for detailed documentation.
+
+The goal isn't a perfect diagram. It's a shared mental model.

@@ -1,39 +1,76 @@
-System design is about making trade-offs. These principles help you make them deliberately.
+You've survived the chaos. Your app scaled from 1 user to 100,000. You fixed things as they broke, added caches when queries were slow, added servers when one wasn't enough.
 
-## Reliability
+Now you're designing the next big feature. Before you start writing code, you want to think about how it should work at scale.
 
-The system works correctly even when things go wrong. Servers crash. Networks fail. Disks corrupt. A reliable system handles these gracefully.
+This is what system design is: thinking through trade-offs before they become emergencies.
 
-**How:** Replication, redundancy, retries with backoff, graceful degradation.
+## The Three Properties Every System Needs
 
-## Scalability
+There are three things every production system needs to get right. You can't maximize all three simultaneously — engineering is always a negotiation between them.
 
-The system continues to work as load increases. What works at 100 users should work at 1,000,000.
+<ArchDiagramStepper
+  nodes={[
+    { id: "reliability", position: { x: 80, y: 60 }, data: { label: "Reliability" }, step: 0 },
+    { id: "scalability", position: { x: 300, y: 60 }, data: { label: "Scalability" }, step: 1 },
+    { id: "maintainability", position: { x: 520, y: 60 }, data: { label: "Maintainability" }, step: 2 },
+    { id: "system", position: { x: 300, y: 230 }, data: { label: "Your System" }, step: 0 }
+  ]}
+  edges={[
+    { id: "r1", source: "reliability", target: "system", animated: true, step: 0 },
+    { id: "r2", source: "scalability", target: "system", animated: true, step: 1 },
+    { id: "r3", source: "maintainability", target: "system", animated: true, step: 2 }
+  ]}
+  height="290px"
+/>
 
-**How:** Horizontal scaling, caching, async processing, database sharding.
+## Reliability: Works When Things Break
 
-## Maintainability
+A reliable system keeps working correctly even when components fail. And things always fail — servers crash, networks hiccup, disks fill up.
 
-Other engineers can understand, modify, and fix the system. This matters more than you think — most time in software is spent reading code, not writing it.
+Design for failure by default:
 
-**How:** Clear boundaries between components, good observability, simple over clever.
+- **Replication** — run multiple copies so one dying doesn't take everything down
+- **Retries with backoff** — failed requests can often succeed on the second try
+- **Graceful degradation** — when a feature can't load, show the rest of the page rather than crashing everything
+- **Circuit breakers** — if a downstream service keeps failing, stop calling it and return a default response
 
-## The CAP Theorem
+The question isn't "will this fail?" — it's "what happens when it fails?"
 
-A distributed system can only guarantee two of three properties:
+## Scalability: Works Under Load
 
-- **Consistency** — every read returns the most recent write
-- **Availability** — every request receives a response
-- **Partition tolerance** — the system works even when parts can't communicate
+A scalable system performs acceptably as load increases. What you built for 100 users should still work at 100,000 (maybe with some changes, but not a full rewrite).
 
-You must choose. Most real systems choose AP (available + partition tolerant) and accept eventual consistency.
+You've lived this journey through the chapters:
+- Caching to reduce database load
+- Indexes to speed up queries
+- Background jobs to move work off the request path
+- Load balancers to spread traffic
+- Stateless servers to scale horizontally
 
-## Design for Failure
+Each of these was a response to a specific bottleneck. Good scaling means anticipating the next bottleneck before it happens.
 
-Assume every component will fail. Design your system to fail gracefully rather than catastrophically.
+## Maintainability: Works for Future Engineers
 
-A circuit breaker stops calling a failing downstream service and returns a default response. A retry with exponential backoff handles transient failures. A timeout ensures you don't wait forever.
+The most underrated property. Software is read far more than it's written. The next person to touch your code might be a future version of you — six months from now, without the context you have today.
 
-## Observability First
+Maintainable systems have:
+- **Clear component boundaries** — each part does one thing, the interfaces between them are simple
+- **Good observability** — logs, metrics, and alerts that tell you what's happening
+- **Simple over clever** — the boring solution is usually the right one; complexity is a liability
 
-You can't fix what you can't see. Add structured logging, metrics, and tracing from day one. When something breaks at 3am, these are your only tools.
+## The CAP Theorem (Simplified)
+
+In a distributed system, during a network partition (when some nodes can't talk to others), you must choose:
+
+- **Consistency** — every request returns accurate, up-to-date data (but you might refuse some requests while partitioned)
+- **Availability** — every request gets a response (but some might return stale data)
+
+Most user-facing apps choose availability. Your social media feed being 2 seconds stale is fine. Your bank balance must be accurate.
+
+You don't need to memorize CAP, but when someone asks "can we have this data be eventually consistent?", you now know what that means — and what the trade-off is.
+
+## Design for the Next Order of Magnitude
+
+When you're at 100,000 users, think about what breaks at 1,000,000. You don't need to build for that scale now — but you should understand what changes would be required.
+
+That awareness shapes your decisions today: avoid patterns that would require a full rewrite at 10× scale, even if they'd be fine for right now.

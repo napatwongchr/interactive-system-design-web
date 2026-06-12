@@ -1,29 +1,67 @@
-Caching stores the result of an expensive operation so you don't have to repeat it.
+Your app has 10,000 users. The front page shows the top 10 posts. Every time someone loads it, your server runs the same query: `SELECT * FROM posts ORDER BY likes DESC LIMIT 10`.
+
+That's 10,000 identical database queries per day — all returning the same result, since the top posts don't change that often.
+
+What if you just... saved the answer?
 
 ## The Core Idea
 
-Some data doesn't change often. A user's profile. The list of product categories. Yesterday's analytics. If 10,000 users all request the same data, why hit the database 10,000 times?
+**Caching** stores the result of an expensive operation so you don't have to repeat it.
 
-Cache the result after the first request. Return it instantly for the next 9,999.
+The first user who loads the top posts triggers the database query. You save the result. The next 9,999 users get the saved result instantly — no database involved.
+
+<ArchDiagramStepper
+  nodes={[
+    { id: "user", position: { x: 40, y: 130 }, data: { label: "User" }, step: 0 },
+    { id: "cache", position: { x: 250, y: 60 }, data: { label: "Cache (Redis)" }, step: 1 },
+    { id: "server", position: { x: 250, y: 200 }, data: { label: "Server" }, step: 1 },
+    { id: "db", position: { x: 490, y: 200 }, data: { label: "Database" }, step: 2 }
+  ]}
+  edges={[
+    { id: "req", source: "user", target: "cache", label: "request", animated: true, step: 1 },
+    { id: "hit", source: "cache", target: "user", label: "cache hit!", animated: true, step: 2 },
+    { id: "miss", source: "cache", target: "server", label: "cache miss →", animated: true, step: 3 },
+    { id: "query", source: "server", target: "db", label: "query DB", animated: true, step: 3 },
+    { id: "store", source: "server", target: "cache", label: "store result", animated: true, step: 4 }
+  ]}
+  height="270px"
+/>
+
+Step 1: User makes a request. Step 2: Cache has the answer — return immediately (cache hit). Step 3: Cache doesn't have it — query the database (cache miss). Step 4: Store the result in cache for the next request.
 
 ## Where to Cache
 
-**In-memory cache** — stored in your server's RAM. Fastest possible. Disappears on restart. Good for data that can be recomputed.
+**In-memory** — stored in your server's RAM. The fastest option. Lost on restart. Good for data that can be recomputed cheaply. Bad when you have multiple servers (each has its own cache).
 
-**Redis** — a dedicated cache server. Shared across multiple server instances. Survives server restarts. The standard choice for production caching.
+**Redis** — a dedicated cache server, separate from your app. Shared across all your server instances. Survives restarts (sort of — Redis can be configured for persistence). The standard production choice.
 
-**HTTP cache headers** — tell browsers and CDNs to cache responses. Free caching with no code on your server.
+**HTTP Cache-Control headers** — tell browsers and CDNs to cache responses without any server-side code:
 
-## Cache Invalidation
+```
+Cache-Control: public, max-age=300
+```
 
-The hard problem. How do you update the cache when the data changes?
+This one is free and requires zero infrastructure. Use it for anything that doesn't change per-user.
 
-- **TTL (Time-To-Live)** — cache entries expire after N seconds. Simple. Data can be stale.
-- **Explicit invalidation** — when you write to the database, also delete the cache entry. Complex. Always fresh.
-- **Cache-aside** — read from cache, on miss read from DB and populate cache. Most common pattern.
+## The Hard Part: Invalidation
+
+"There are only two hard things in computer science: cache invalidation and naming things." — Phil Karlton
+
+The question is: when the data changes, how do you update the cache?
+
+**TTL (Time-To-Live)** — cache entries automatically expire after N seconds. Simple. The data might be stale for up to N seconds. Acceptable for most things.
+
+**Explicit invalidation** — when you write to the database, immediately delete the relevant cache entry. It gets regenerated on the next request. Always fresh. More code to maintain.
+
+**Cache-aside** — the most common pattern: check cache first, on miss fetch from DB and populate cache. Your code does both operations explicitly.
 
 ## What Not to Cache
 
-- User-specific data (unless keyed by user ID)
-- Data that changes on every request
-- Anything that must be real-time
+Some things should never be cached:
+
+- **User-specific data** without keying by user ID (user A sees user B's profile)
+- **Financial data** that must be real-time accurate
+- **Write operations** — only cache reads
+- **Small datasets** that are fast to query anyway (adds complexity for no gain)
+
+Start with caching your most-queried, least-frequently-changing data. The top posts list. The product catalog. Public profile pages. You'll feel the impact immediately.

@@ -1,38 +1,82 @@
-Environment variables let you configure your app differently in different environments — and keep secrets out of your code.
+Your friend texts you at 11pm: "Hey, why is your database password in plain text on GitHub?"
 
-## The Problem
+You check your repo. There it is: `DATABASE_URL=postgres://admin:my_super_secret_pass@db.example.com/myapp` committed in `config.js`, visible to the entire world.
 
-Your app needs a database password. You can't commit it to GitHub — anyone who forks your repo would have it. You also need different values locally vs in production.
+This is the environment variable problem. Here's how to fix it — and make sure it never happens again.
 
-Environment variables solve both problems.
+## The Problem: Secrets in Code
 
-## How They Work
+Your app needs secrets to run:
+- A database password to connect to Postgres
+- A secret key to sign session cookies  
+- An API key to send emails with Resend
+- An OpenAI key to power your AI features
 
-Environment variables are key-value pairs set outside your code:
+You can't hardcode them — anyone who sees your code has your credentials. You can't commit a config file — your git history is forever.
+
+You need a place to store secrets that's separate from your code.
+
+## The Solution: Environment Variables
+
+Environment variables are key-value pairs that live outside your code, set on the server at runtime.
+
+<ArchDiagramStepper
+  nodes={[
+    { id: "env", position: { x: 60, y: 60 }, data: { label: ".env (local only)" }, step: 0 },
+    { id: "dashboard", position: { x: 60, y: 200 }, data: { label: "Vercel Dashboard (prod)" }, step: 0 },
+    { id: "server", position: { x: 320, y: 130 }, data: { label: "Your Server" }, step: 1 },
+    { id: "db", position: { x: 560, y: 130 }, data: { label: "Database" }, step: 2 }
+  ]}
+  edges={[
+    { id: "local", source: "env", target: "server", label: "process.env", animated: true, step: 1 },
+    { id: "prod", source: "dashboard", target: "server", label: "injected at deploy", animated: true, step: 1 },
+    { id: "connect", source: "server", target: "db", label: "DATABASE_URL", animated: true, step: 2 }
+  ]}
+  height="270px"
+/>
+
+Step 1: Two sources of secrets (local file and production dashboard). Step 2: Both inject into your server's environment. Step 3: Your server reads them to connect to the database.
+
+## The .env File
+
+Locally, you store your secrets in a `.env` file at the root of your project:
 
 ```bash
 DATABASE_URL=postgres://user:password@localhost:5432/mydb
-SECRET_KEY=abc123verysecret
-NODE_ENV=production
+NEXTAUTH_SECRET=some-random-string-32-chars-long
+OPENAI_API_KEY=sk-proj-...
 ```
 
-Your code reads them at runtime:
+Your code reads them like this:
 
 ```typescript
 const dbUrl = process.env.DATABASE_URL
 ```
 
-## The `.env` File
+**Critical rule: Add `.env` to your `.gitignore` right now.** This file never gets committed. Each developer and each deployment environment has their own copy.
 
-Locally, you store these in a `.env` file. **Always add `.env` to `.gitignore`.** The `.env` file is never committed — each developer and each deployment environment has their own copy.
+## In Production
 
-In production (Vercel, Railway, Render), you set them in the dashboard.
+When you deploy to Vercel, Railway, or Render, you don't use a `.env` file. You set environment variables in the platform's dashboard. They're injected into your server's environment when it starts up.
 
-## Common Patterns
+The code doesn't change — `process.env.DATABASE_URL` works the same way everywhere. Only where the values come from changes.
 
-- `NODE_ENV` — `development`, `test`, or `production`
-- `DATABASE_URL` — the database connection string
-- `NEXT_PUBLIC_` prefix — in Next.js, makes a variable available to the browser
-- API keys for third-party services (Stripe, Resend, OpenAI)
+## Next.js Specifics
 
-Never log environment variables. Never put them in error messages. Treat them like passwords.
+Next.js has one extra rule: variables available to the **browser** must start with `NEXT_PUBLIC_`.
+
+```bash
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...   # Browser can read this
+STRIPE_SECRET_KEY=sk_live_...                    # Server only — never sent to browser
+```
+
+If you don't add `NEXT_PUBLIC_`, the variable is `undefined` in your React components. That's the security feature — your secrets stay on the server.
+
+## The Cleanup
+
+If you've already committed secrets, you need to:
+1. Rotate all exposed credentials immediately (change the passwords)
+2. Add `.env` to `.gitignore`
+3. Use `git filter-branch` or BFG Repo Cleaner to remove them from history
+
+The rotation is the important part. Removing from history is important too, but an exposed secret should be treated as compromised whether or not you clean the history.

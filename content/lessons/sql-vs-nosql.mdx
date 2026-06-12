@@ -1,37 +1,72 @@
-Choosing between SQL and NoSQL is one of the most common system design decisions. Here's how to think about it.
+You're building a new feature: a user's activity feed. Each event has a different shape — some are "posted a comment," some are "liked a photo," some are "followed a user." The data structure varies.
 
-## SQL (Relational Databases)
+You start modeling it in Postgres. Each event type needs different columns. You're adding `NULLABLE` columns for things that only apply to some event types. It's getting messy.
 
-SQL databases store data in tables with rows and columns. Relationships between tables are enforced. The schema is fixed.
+Someone on a forum says "just use MongoDB for this, it's document-oriented." Should you?
 
-**Examples:** Postgres, MySQL, SQLite
+This is the SQL vs NoSQL decision. Here's how to think about it clearly.
 
-**Good for:**
-- Structured data with clear relationships (users, orders, products)
-- Queries that join multiple tables
-- Transactions where multiple operations must all succeed or all fail
-- When data integrity matters more than raw speed
+## SQL: Tables and Relationships
 
-## NoSQL (Non-Relational Databases)
+SQL databases store data in tables with fixed schemas — rows and columns, like a spreadsheet. Relationships between tables are enforced. You can join tables in a single query.
 
-NoSQL is an umbrella term for databases that don't use tables. Different types serve different use cases.
+<ArchDiagramStepper
+  nodes={[
+    { id: "users", position: { x: 80, y: 80 }, data: { label: "users table" }, step: 0 },
+    { id: "posts", position: { x: 80, y: 230 }, data: { label: "posts table" }, step: 1 },
+    { id: "doc", position: { x: 440, y: 155 }, data: { label: "{ user: {...}, posts: [...] }" }, step: 2 }
+  ]}
+  edges={[
+    { id: "fk", source: "posts", target: "users", label: "user_id → users.id", animated: true, step: 1 },
+    { id: "doc_label", source: "users", target: "doc", label: "document store", animated: true, step: 2 }
+  ]}
+  height="320px"
+/>
 
-**Document stores** (MongoDB, Firestore) — store JSON-like documents. Flexible schema. Good for content-heavy apps or when the data shape varies.
+**SQL examples:** Postgres, MySQL, SQLite
 
-**Key-value stores** (Redis, DynamoDB) — fast lookups by key. Good for caches, sessions, real-time data.
+**Great for:**
+- Data with clear relationships (users have posts, posts have comments, comments have authors)
+- Queries that combine data from multiple tables
+- Transactions where multiple operations must succeed or fail together
+- When data integrity matters — you can't have a post without a valid `user_id`
 
-**Column-family stores** (Cassandra) — optimized for wide tables and time-series data. Good for massive scale writes.
+## NoSQL: Documents, Keys, and More
 
-**Graph databases** (Neo4j) — optimized for relationships between entities. Good for social networks, recommendations.
+NoSQL is an umbrella term. The types are quite different from each other:
 
-## The Default Choice
+**Document stores** (MongoDB, Firestore) — store JSON-like documents. Each document can have a different shape. Great for content with variable structure, or when you want to avoid joins.
 
-For most apps: **use Postgres.** It's reliable, well-understood, handles 99% of use cases, and supports JSON columns when you need flexibility.
+**Key-value stores** (Redis, DynamoDB) — ultra-fast lookups by key. You ask "what's the value for key X?" and get an answer in microseconds. Great for caches, sessions, leaderboards.
 
-## When to Consider NoSQL
+**Column-family stores** (Cassandra) — optimized for writing enormous amounts of data very fast. Used by Netflix, Discord, Instagram at extreme scale.
 
-- You need Redis-style caching or pub/sub (use Redis alongside Postgres)
-- Your data is genuinely document-shaped with variable structure (consider MongoDB or Firestore)
-- You're at massive scale with specific write patterns (Cassandra, DynamoDB)
+**Graph databases** (Neo4j) — optimized for highly connected data: social networks, recommendation engines, fraud detection.
 
-Don't choose NoSQL because it sounds modern. Choose it because it solves a specific problem SQL doesn't.
+## The Default Answer: Postgres
+
+For your activity feed question: you don't need MongoDB. Postgres supports a `JSONB` column type that lets you store arbitrary JSON alongside structured columns.
+
+```sql
+CREATE TABLE events (
+  id         BIGINT PRIMARY KEY,
+  user_id    INT REFERENCES users(id),
+  event_type VARCHAR(50),
+  payload    JSONB,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+Now each event has a structured `event_type` and an arbitrary `payload`. You get SQL's transactions and foreign keys, plus the flexibility of JSON.
+
+**Default to Postgres.** It handles 99% of use cases, and it's the database most developers know how to operate reliably.
+
+## When to Actually Consider NoSQL
+
+**Redis** — use it alongside Postgres, not instead of it. Redis is the right tool for caching, sessions, pub/sub, and rate limiting.
+
+**MongoDB/Firestore** — if your data is genuinely document-shaped with extreme structural variation and you rarely need to join. Real-time apps where Firestore's live updates are a key feature.
+
+**Cassandra/DynamoDB** — if you're writing tens of thousands of rows per second, distributed across multiple data centers. Most apps never reach this.
+
+Don't choose NoSQL because it sounds modern. Choose it because it solves a specific problem that Postgres doesn't. The activity feed? Use Postgres with JSONB — you get the flexibility you need without giving up transactions and type safety.

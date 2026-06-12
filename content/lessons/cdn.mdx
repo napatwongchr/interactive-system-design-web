@@ -1,38 +1,77 @@
-A CDN — Content Delivery Network — puts copies of your static files on servers around the world, close to your users.
+Your server is in Virginia. A user in Tokyo opens your app.
 
-## The Problem It Solves
+Every image, every JavaScript bundle, every CSS file has to travel from Virginia to Tokyo before they see anything. That's roughly 150ms of round-trip time just for the physics — the light bouncing between continents.
 
-Your server is in Virginia. A user in Tokyo loads your app. Every image, every JavaScript file travels across the Pacific. Latency adds up.
+At 10,000 users spread around the world, this adds up fast. Some users see your app in 100ms. Others wait 2 seconds just for the static files to arrive.
 
-A CDN has servers (called edge nodes or PoPs — Points of Presence) in Tokyo, Sydney, London, São Paulo. The user gets files from the nearest node, not your origin server.
+A CDN fixes this.
 
-## What Gets Cached
+## What a CDN Does
 
-CDNs cache **static assets** — files that don't change per-user:
+A **CDN** (Content Delivery Network) puts copies of your static files on servers around the world. When a user in Tokyo requests your logo, they get it from a CDN server in Tokyo — not from your server in Virginia.
 
-- JavaScript bundles
+<ArchDiagramStepper
+  nodes={[
+    { id: "tokyo", position: { x: 60, y: 200 }, data: { label: "User (Tokyo)" }, step: 0 },
+    { id: "edge_tokyo", position: { x: 280, y: 200 }, data: { label: "CDN Edge (Tokyo)" }, step: 1 },
+    { id: "origin", position: { x: 520, y: 100 }, data: { label: "Origin Server (Virginia)" }, step: 2 },
+    { id: "london", position: { x: 60, y: 80 }, data: { label: "User (London)" }, step: 0 },
+    { id: "edge_london", position: { x: 280, y: 80 }, data: { label: "CDN Edge (London)" }, step: 1 }
+  ]}
+  edges={[
+    { id: "t1", source: "tokyo", target: "edge_tokyo", label: "request", animated: true, step: 1 },
+    { id: "l1", source: "london", target: "edge_london", label: "request", animated: true, step: 1 },
+    { id: "miss", source: "edge_tokyo", target: "origin", label: "cache miss → fetch", animated: true, step: 2 },
+    { id: "hit", source: "edge_london", target: "london", label: "cache hit!", animated: true, step: 3 }
+  ]}
+  height="310px"
+/>
+
+Step 1: Two users in different cities make requests. Step 2: Tokyo gets a cache miss — the CDN fetches from your origin server and caches it. Step 3: London gets a cache hit — their nearest edge already has it.
+
+## What Gets Cached on a CDN
+
+CDNs cache **static assets** — files that are the same for every user and don't change often:
+
+- JavaScript bundles (your React app)
 - CSS files
-- Images and fonts
-- Pre-built HTML pages (with Next.js static generation)
+- Images, fonts, icons
+- Pre-rendered HTML pages (with Next.js static generation)
 
-## How It Works
+Your API responses — which are different for each user or change frequently — stay on your origin server. The CDN doesn't handle those.
 
-1. User requests `/logo.png`
-2. Request goes to the nearest CDN edge node
-3. If the node has it cached, it returns immediately
-4. If not, the CDN fetches from your origin, caches it, returns it
-5. The next user at that edge node gets it from cache
+## The Cache-Control Header
 
-## Cache-Control Headers
-
-You control CDN behavior with HTTP headers:
+You control how the CDN caches your files with the `Cache-Control` response header:
 
 ```
 Cache-Control: public, max-age=31536000, immutable
 ```
 
-This tells the CDN to cache the file for one year. For files with hash-based names (like `bundle.a3f2e1.js`), this is safe — the hash changes when the content changes.
+This tells the CDN: "cache this for one year, it will never change."
 
-## Free CDN with Vercel
+For files with hash-based names (like `bundle.a3f2e1.js` — which Next.js generates automatically), this is completely safe. When the content changes, the filename hash changes, so users always get the new file.
 
-If you deploy on Vercel, your static assets are automatically distributed to their edge network. You get CDN behavior for free.
+For your HTML pages (which reference the latest bundle hashes):
+
+```
+Cache-Control: public, max-age=0, must-revalidate
+```
+
+This says: "always check if there's a new version before using the cached one."
+
+## You Probably Already Have a CDN
+
+If you're on Vercel, congratulations — your static assets are already distributed to their global edge network. You get CDN behavior for free.
+
+If you're on Railway or Render, you can add Cloudflare for free. Put Cloudflare in front of your domain and your static files are automatically cached at the edge.
+
+## What You Gain
+
+CDN primarily reduces **latency for static assets**, which are usually most of the bytes transferred when loading a page. It also:
+
+- Reduces load on your origin server (the CDN serves most requests)
+- Handles traffic spikes gracefully (the CDN absorbs the load)
+- Improves reliability (if your origin is briefly down, cached pages still load)
+
+It's one of the highest-impact, lowest-effort improvements you can make.

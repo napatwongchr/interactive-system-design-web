@@ -1,31 +1,70 @@
-A stateless server doesn't remember anything between requests. This makes it trivially easy to scale.
+You've set up four servers behind a load balancer. Traffic is distributed. Things are fast.
+
+Then users start reporting a bug: they get logged out randomly. Sometimes mid-session. They log back in, it works for a while, then happens again.
+
+You investigate. The problem: your app stores session data in each server's memory. When a user logs in on Server 1, Server 2 and 3 and 4 have no idea. Next request goes to Server 3 — logged out.
+
+This is the stateful server problem.
 
 ## Stateful vs Stateless
 
-**Stateful server** — stores session data in memory. Knows which users are logged in. Can't be replaced or duplicated without losing that state.
+**Stateful server** — remembers things between requests. User sessions, in-flight calculations, local caches. Works fine with one server. Breaks badly when you have multiple.
 
-**Stateless server** — every request contains everything needed to process it. No memory between requests. Any server can handle any request.
+**Stateless server** — every request contains everything needed to process it. The server remembers nothing between requests. Any server can handle any request.
 
-## Why Stateless Scales Better
+<ArchDiagramStepper
+  nodes={[
+    { id: "user", position: { x: 40, y: 130 }, data: { label: "User" }, step: 0 },
+    { id: "lb", position: { x: 220, y: 130 }, data: { label: "Load Balancer" }, step: 1 },
+    { id: "s1", position: { x: 420, y: 60 }, data: { label: "Server 1" }, step: 2 },
+    { id: "s2", position: { x: 420, y: 200 }, data: { label: "Server 2" }, step: 2 },
+    { id: "redis", position: { x: 620, y: 130 }, data: { label: "Redis (sessions)" }, step: 3 }
+  ]}
+  edges={[
+    { id: "req", source: "user", target: "lb", label: "any request", animated: true, step: 1 },
+    { id: "r1", source: "lb", target: "s1", animated: true, step: 2 },
+    { id: "r2", source: "lb", target: "s2", animated: true, step: 2 },
+    { id: "sess1", source: "s1", target: "redis", label: "session lookup", animated: true, step: 3 },
+    { id: "sess2", source: "s2", target: "redis", label: "session lookup", animated: true, step: 3 }
+  ]}
+  height="270px"
+/>
 
-With stateful servers, you need sticky sessions — the load balancer must always send a user to the same server. If that server dies, the user's session dies.
+Step 1: User makes a request. Step 2: Load balancer sends it to any available server. Step 3: Both servers check Redis for the session — same data, regardless of which server handles the request.
 
-With stateless servers, the load balancer can route requests anywhere. Add a server: new capacity immediately. Remove a server: no sessions lost.
+## The Fix: Move State Out of the Server
 
-## How to Be Stateless
+Every piece of state your server currently holds in memory needs to move somewhere shared.
 
-Move all state out of the server:
-
-| State | Where to store it |
-|-------|------------------|
-| Sessions | JWT in the client, or Redis |
-| Uploaded files | S3 or equivalent object storage |
-| Background job results | Database or Redis |
+| What | Where to move it |
+|------|-----------------|
+| User sessions | JWTs in the client, or Redis |
+| Uploaded files | S3 or object storage |
+| Background job state | Database or Redis |
 | Rate limiting counters | Redis |
-| Caches | Redis |
+| In-memory caches | Redis |
 
-The pattern: your servers become disposable. The database and Redis hold the truth.
+The pattern: your servers become **disposable**. Kill one, spin up another — nothing is lost. Redis and your database hold the truth.
+
+## JWTs: The Stateless Session
+
+A **JWT** (JSON Web Token) is a signed token stored in the browser. It contains: "this is user #42, they logged in at this time, the token expires at this time."
+
+The server doesn't need to look anything up — it reads the JWT, verifies the signature, and knows who the user is. No database query, no Redis lookup, no shared state.
+
+The trade-off: you can't immediately invalidate a JWT. If a user changes their password, their old JWT still works until it expires. For most apps, this is fine. For security-critical flows (password reset, account compromise), you pair JWTs with a short-lived token blocklist in Redis.
+
+## Why This Makes Scaling Easy
+
+A stateless server can be:
+
+- Added instantly (just start a new one and add it to the load balancer)
+- Removed instantly (drain its active connections, shut it down — nothing is lost)
+- Replaced during deployment (update one at a time with zero downtime)
+- Run in any data center (no sticky sessions, no geographic constraints)
+
+Statelessness is what makes auto-scaling possible. When traffic spikes, your cloud provider can spin up new instances in seconds. When it drops, it shuts them down. Your app doesn't care.
 
 ## The Twelve-Factor App
 
-The concept of stateless processes comes from the [Twelve-Factor App](https://12factor.net/) methodology. It's worth reading — most cloud-native apps follow these principles, and AI-generated apps often violate them accidentally.
+The stateless process concept comes from the Twelve-Factor App methodology — a set of principles for building cloud-native software. Most of what you've learned in this chapter aligns with it. Worth reading when you have time.

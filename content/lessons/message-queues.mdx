@@ -1,39 +1,78 @@
-A message queue decouples the services in your system so they don't need to talk to each other directly.
+You've split your app into services. The order service calls the notification service to send a confirmation email. Simple enough.
+
+Then the notification service goes down for 10 minutes during a deployment.
+
+During those 10 minutes, every order fails — not because the order itself was wrong, but because the notification call failed. Customers lose their orders. You lose revenue.
+
+This is what happens when services call each other directly. A queue fixes it.
 
 ## The Problem with Direct Calls
 
-Service A calls Service B to process an order. Service B is slow, or down, or overwhelmed. Service A waits. Or fails. Or both.
+When Service A directly calls Service B:
 
-Direct calls create tight coupling and fragility. If B has a problem, A has a problem.
+- If B is slow, A is slow
+- If B is down, A fails
+- If B is overwhelmed, A backs up
+- A and B are **tightly coupled**: problems in B become problems in A
 
-## Enter the Queue
+<ArchDiagramStepper
+  nodes={[
+    { id: "orders", position: { x: 60, y: 130 }, data: { label: "Order Service" }, step: 0 },
+    { id: "queue", position: { x: 290, y: 130 }, data: { label: "Message Queue" }, step: 1 },
+    { id: "notify", position: { x: 520, y: 130 }, data: { label: "Notification Service" }, step: 2 },
+    { id: "dead", position: { x: 520, y: 270 }, data: { label: "Service is down?" }, step: 3 }
+  ]}
+  edges={[
+    { id: "publish", source: "orders", target: "queue", label: "publish: order-placed", animated: true, step: 1 },
+    { id: "consume", source: "queue", target: "notify", label: "consume", animated: true, step: 2 },
+    { id: "retry", source: "queue", target: "dead", label: "retry later", animated: true, step: 3 }
+  ]}
+  height="310px"
+/>
 
-Service A drops a message into the queue: "Process order #4521." Done. Service A's work is complete.
+Step 1: Order service publishes a message to the queue and immediately moves on. Step 2: Notification service consumes the message at its own pace. Step 3: If the notification service is down, the queue holds the message and retries — the order is never lost.
 
-Service B reads from the queue at its own pace. If B is slow, messages queue up. If B crashes and restarts, it picks up where it left off. Service A never knew anything was wrong.
+## How It Works
+
+The order service **publishes** a message: `{ type: "order-placed", orderId: 4521, userId: 42 }`.
+
+That's it. The order service's job is done. It doesn't wait. It doesn't care what happens next.
+
+The notification service **subscribes** to messages of type `order-placed`. When it reads one, it sends the email.
+
+If the notification service is down, the message sits in the queue. When it comes back up, it reads all the queued messages and processes them. Zero orders lost.
 
 ## Key Properties
 
-**Durability** — messages are persisted, not lost if a service crashes.
+**Durability** — messages are stored on disk, not in memory. Even if the queue server restarts, your messages survive.
 
-**At-least-once delivery** — most queues guarantee a message will be delivered at least once. Your consumer must handle duplicates (idempotency).
+**At-least-once delivery** — the queue guarantees a message will be delivered at least once. (Sometimes it delivers it twice if something goes wrong mid-processing.) Your consumer needs to handle duplicates — called **idempotency**.
 
-**Backpressure** — the queue absorbs traffic spikes. B doesn't need to handle 10,000 orders per second if they come in bursts — it works through the queue at 500/second steadily.
+**Backpressure** — the queue absorbs traffic spikes. If 10,000 orders come in at once and your notification service handles 500/minute, the messages pile up safely in the queue. Everything eventually gets processed.
 
 ## Common Use Cases
 
-- Order processing
-- Sending emails and notifications
-- Webhook delivery
-- Data pipeline ingestion
-- Event-driven workflows between microservices
+- Order and payment confirmations
+- Sending emails, SMS, and push notifications
+- Image and video processing
+- Webhook delivery to external services
+- Syncing data between systems
+- Any work you'd put in an async background job
 
-## Popular Tools
+## When to Use a Queue vs a Background Job
 
-**Redis + BullMQ** — simple, fast, popular with Node.js.
+The distinction is subtle:
 
-**RabbitMQ** — full-featured message broker with routing rules.
+**Background jobs** (BullMQ, Inngest) — work within your own system. "Do this thing later."
 
-**AWS SQS** — managed queue, scales automatically.
+**Message queues** (RabbitMQ, SQS, Kafka) — communication between separate services. "Tell that other system that this happened."
 
-**Kafka** — high-throughput event streaming at massive scale.
+For most apps, a background job system is enough. You reach for a full message queue when you have genuinely separate services that need to communicate.
+
+## Tools
+
+**Redis + BullMQ** — the most common Node.js choice. Redis stores the queue, BullMQ handles retries, priorities, and delayed jobs.
+
+**AWS SQS** — managed queue that scales automatically. Zero infrastructure to maintain.
+
+**Kafka** — high-throughput event streaming for massive scale. Overkill unless you're handling millions of events per second.

@@ -1,29 +1,64 @@
-A load balancer distributes incoming requests across multiple servers so no single server gets overwhelmed.
+Your app has 100,000 users. You've cached aggressively, indexed your queries, and moved work to background jobs. Your server is still at 90% CPU under peak load.
 
-## The Core Idea
+One server isn't enough anymore.
 
-One server can handle, say, 500 concurrent requests comfortably. At 2,000 concurrent users, you need four servers. But how do users know which server to talk to?
+You spin up three more. Same code, different machines. But now there's a question: when a user visits your app, which server do they talk to?
 
-The load balancer is the single entry point. It receives every request and forwards it to one of your servers, spreading the load evenly.
+That's what a load balancer answers.
 
-## How It Decides
+## The Single Entry Point
 
-**Round-robin** — send request 1 to server A, request 2 to server B, request 3 to server C, request 4 back to server A. Simple and even.
+A **load balancer** sits in front of your servers. Every request goes to the load balancer first. It picks a server and forwards the request. To the user, it looks like one URL, one service.
 
-**Least connections** — send to whichever server has the fewest active connections. Better for requests with varying processing times.
+<ArchDiagramStepper
+  nodes={[
+    { id: "internet", position: { x: 40, y: 130 }, data: { label: "100k Users" }, step: 0 },
+    { id: "lb", position: { x: 240, y: 130 }, data: { label: "Load Balancer" }, step: 1 },
+    { id: "s1", position: { x: 460, y: 40 }, data: { label: "Server 1" }, step: 2 },
+    { id: "s2", position: { x: 460, y: 130 }, data: { label: "Server 2" }, step: 2 },
+    { id: "s3", position: { x: 460, y: 220 }, data: { label: "Server 3" }, step: 2 },
+    { id: "db", position: { x: 660, y: 130 }, data: { label: "Database" }, step: 3 }
+  ]}
+  edges={[
+    { id: "in", source: "internet", target: "lb", label: "all traffic", animated: true, step: 1 },
+    { id: "r1", source: "lb", target: "s1", animated: true, step: 2 },
+    { id: "r2", source: "lb", target: "s2", animated: true, step: 2 },
+    { id: "r3", source: "lb", target: "s3", animated: true, step: 2 },
+    { id: "db", source: "s2", target: "db", label: "shared DB", animated: true, step: 3 }
+  ]}
+  height="280px"
+/>
 
-**IP hash** — always send the same client to the same server. Useful if your servers have local state (though stateless servers are better).
+Step 1: All traffic arrives. Step 2: Load balancer distributes across 3 servers. Step 3: All servers share the same database.
+
+## How It Decides Where to Send Requests
+
+**Round-robin** — request 1 goes to Server 1, request 2 to Server 2, request 3 to Server 3, then back to Server 1. Dead simple and often good enough.
+
+**Least connections** — send to whichever server has the fewest active connections right now. Better when some requests take longer than others.
+
+**IP hash** — always send the same client to the same server based on their IP address. Only needed if your servers have local state (but you'll avoid that — more on this in the Stateless Servers lesson).
 
 ## Health Checks
 
-Load balancers continuously check if servers are healthy. If a server stops responding, the load balancer stops sending it traffic. When it recovers, traffic resumes.
+The load balancer constantly checks if your servers are alive, usually by hitting `/health` every few seconds. If a server stops responding, the load balancer stops sending it traffic.
 
-This is how you deploy without downtime: take servers out of rotation, update them, put them back.
+When the server recovers, traffic resumes.
+
+This is how you deploy with **zero downtime**: take Server 1 out of rotation → update it → put it back → repeat for Server 2 → repeat for Server 3. Users never see a blip.
 
 ## Layer 4 vs Layer 7
 
-**Layer 4** (TCP) — routes based on IP address and port. Fast. Can't inspect the request.
+There are two kinds of load balancers:
 
-**Layer 7** (HTTP) — routes based on the URL path, headers, or cookies. Can route `/api/*` to API servers and `/` to web servers.
+**Layer 4** (TCP) — routes based on IP address and port. Ultra-fast. Can't look at the request content.
 
-Vercel, AWS ALB, and Nginx (in proxy mode) are all layer 7 load balancers.
+**Layer 7** (HTTP) — can read the HTTP request: the URL, headers, cookies. Much more powerful. Can route `/api/*` to your API servers and `/` to your frontend servers. Can terminate SSL. Can inject headers.
+
+Almost every production app uses Layer 7. AWS ALB, Nginx, Caddy, and Vercel's infrastructure are all Layer 7 load balancers.
+
+## You Already Have One
+
+If you're on Vercel or similar platforms, there's already a load balancer in front of your app. You never configured it — it's just there.
+
+When you scale beyond one managed server, you'll explicitly configure one. But the concept is the same as what you're already using.

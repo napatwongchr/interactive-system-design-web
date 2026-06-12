@@ -1,25 +1,70 @@
-The database is almost always the first thing that breaks under load. Here's why.
+Your app was fast at 10 users. At 1,000 users it's suddenly slow. The server looks fine — CPU is low, memory is fine. But responses take 3 seconds.
 
-## Why the Database
+You add some logging. Every request is spending almost all its time... waiting for the database.
 
-Your server is stateless — you can run many copies of it. Your database is stateful — there's one, and it has a fixed amount of resources.
+The database is the bottleneck. It almost always is.
 
-Every request that needs data hits the database. At 1,000 users, that's 1,000 concurrent queries. Most databases handle this fine. At 10,000 with poorly written queries, it falls apart.
+## Why the Database Struggles First
 
-## Slow Queries
+Your server is stateless — you can run ten copies of it. Your database is stateful — there's one, and it has a fixed amount of resources it can apply to queries.
 
-A query that scans an entire table is fine at 1,000 rows. At 10 million rows, it takes seconds. The fix is indexing — but you need to know which queries to index.
+At 1,000 users, 1,000 requests are all hitting that one database simultaneously. Most of those requests need data. The database is handling queries as fast as it can, but the queue grows.
 
-**N+1 queries** are a common trap: fetching a list of posts, then fetching the author for each post individually. That's 1 + N database round trips instead of 1. ORMs make this easy to do by accident.
+<ArchDiagramStepper
+  nodes={[
+    { id: "requests", position: { x: 40, y: 130 }, data: { label: "1,000 requests" }, step: 0 },
+    { id: "pool", position: { x: 260, y: 130 }, data: { label: "Connection Pool (20)" }, step: 1 },
+    { id: "db", position: { x: 500, y: 130 }, data: { label: "Database" }, step: 2 },
+    { id: "waiting", position: { x: 260, y: 270 }, data: { label: "980 requests waiting..." }, step: 3 }
+  ]}
+  edges={[
+    { id: "req", source: "requests", target: "pool", label: "1,000 queries", animated: true, step: 1 },
+    { id: "active", source: "pool", target: "db", label: "20 running", animated: true, step: 2 },
+    { id: "wait", source: "requests", target: "waiting", label: "queue", animated: true, step: 3 }
+  ]}
+  height="320px"
+/>
 
-## Connection Pool Exhaustion
+Step 1: All requests arrive. Step 2: Only 20 can run at once (connection pool). Step 3: The rest queue and wait, holding up your responses.
 
-Your server maintains a pool of database connections. Each query needs one. If 100 requests come in at once and your pool has 20 connections, 80 requests wait.
+## The Three Database Killers
 
-The fix: reduce query time (so connections are freed faster), increase pool size (carefully — databases also have limits), or cache results so fewer queries run.
+### 1. Slow Queries
 
-## Lock Contention
+A query that does a full table scan is fine at 1,000 rows. At 5 million rows, it takes seconds. Multiply by 1,000 concurrent users and you're done.
 
-When multiple requests try to update the same row simultaneously, the database serializes them. One waits while the other runs. At high concurrency, this creates queues.
+The fix is **indexing** — you'll learn that in Chapter 4. For now, know that unindexed queries on large tables are the single most common cause of database slowdowns.
 
-The fix: keep transactions short and targeted.
+### 2. The N+1 Problem
+
+This one is sneaky. Your ORM makes it easy to write:
+
+```typescript
+const posts = await db.posts.findMany()          // 1 query
+for (const post of posts) {
+  const author = await db.users.findById(post.authorId)  // N queries
+  // ...
+}
+```
+
+That's `1 + N` queries — one to get the posts, then one per post to get the author. For a page showing 50 posts, that's 51 database round trips instead of 1.
+
+AI-generated code does this a lot. Look for `findMany()` calls inside loops.
+
+The fix: use `include` or `join` to fetch related data in one query.
+
+### 3. Connection Pool Exhaustion
+
+As shown above: your pool has a fixed size. When it's full, every new query waits. If queries are slow, the pool stays full longer. A feedback loop begins.
+
+The fix: faster queries (fewer connections needed at once) + caching (fewer queries overall).
+
+## How to Find the Problem
+
+If you're on Postgres, run `EXPLAIN ANALYZE` before a slow query. It shows you exactly what the database did:
+
+- **Seq Scan** on a large table = no index, it read every row
+- **cost** numbers = relative expense of each operation
+- **actual time** = how long it actually took
+
+The first Seq Scan on a large table is usually your smoking gun.

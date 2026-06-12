@@ -1,40 +1,78 @@
-Error logs tell you exactly what went wrong — once you know how to read them.
+Your app is throwing errors. Users are seeing broken pages. You open your logs and are greeted by a wall of red text.
+
+The information you need is in there. You just need to know how to read it.
 
 ## Anatomy of a Log Line
 
-Most log lines have the same structure:
+Most log lines follow the same structure:
 
 ```
-2024-01-15T14:32:01.234Z ERROR [api/users] Connection timeout after 5000ms
-  at QueryExecutor.execute (db/query.ts:47)
-  at UserRepository.findById (repos/user.ts:23)
-  at UsersHandler.getUser (api/users.ts:12)
+2024-03-15T02:41:07.812Z ERROR [api/posts] Connection timeout after 5000ms
+  at QueryExecutor.execute (lib/db/query.ts:47)
+  at PostRepository.findMany (lib/repos/posts.ts:23)
+  at PostsHandler.list (app/api/posts/route.ts:12)
 ```
 
-- **Timestamp** — when it happened
-- **Level** — ERROR, WARN, INFO, DEBUG
-- **Location** — which module or route
-- **Message** — what went wrong
-- **Stack trace** — the call chain that led here
+<ArchDiagramStepper
+  nodes={[
+    { id: "time", position: { x: 60, y: 80 }, data: { label: "Timestamp" }, step: 0 },
+    { id: "level", position: { x: 240, y: 80 }, data: { label: "Level (ERROR)" }, step: 1 },
+    { id: "location", position: { x: 420, y: 80 }, data: { label: "Location [api/posts]" }, step: 2 },
+    { id: "msg", position: { x: 150, y: 220 }, data: { label: "Message" }, step: 3 },
+    { id: "stack", position: { x: 380, y: 220 }, data: { label: "Stack Trace" }, step: 4 }
+  ]}
+  edges={[
+    { id: "l1", source: "time", target: "msg", animated: true, step: 3 },
+    { id: "l2", source: "level", target: "msg", animated: true, step: 3 },
+    { id: "l3", source: "location", target: "stack", animated: true, step: 4 }
+  ]}
+  height="290px"
+/>
 
-## Levels
+Step 1: Timestamp — when it happened. Step 2: Level — how bad. Step 3: Location — which part of the app. Step 4: Message and stack trace — what went wrong and the call chain.
 
-| Level | Meaning |
-|-------|---------|
-| ERROR | Something broke. Requires action. |
-| WARN | Something unexpected but recoverable. Worth watching. |
-| INFO | Normal operation events. |
-| DEBUG | Verbose details, usually off in production. |
+## Log Levels
 
-## Finding the Root Cause
+| Level | What it means |
+|-------|--------------|
+| ERROR | Something broke. Needs your attention. |
+| WARN | Something unexpected but the app kept running. Worth watching. |
+| INFO | Normal events — a request was handled, a job ran. |
+| DEBUG | Verbose detail, usually disabled in production. |
 
-Stack traces are read bottom-up: the bottom is where the request entered your code, the top is where it crashed.
+In production, you usually only see `ERROR` and `WARN`. If you're not seeing errors, your logging might not be set up right.
 
-Look for the first line in your own code (not in `node_modules`). That's where the problem is, or where you need to add more logging.
+## Reading the Stack Trace
 
-## Common Patterns
+Stack traces are read **bottom-up**. The bottom is where the request entered your code. The top is where it crashed.
 
-- `ECONNREFUSED` — the database or service isn't running or isn't reachable
-- `ETIMEDOUT` — a connection or query took too long
-- `cannot read properties of undefined` — code assumed data existed, it didn't
-- `relation does not exist` — a database migration didn't run
+```
+at PostsHandler.list (app/api/posts/route.ts:12)     ← request entered here
+at PostRepository.findMany (lib/repos/posts.ts:23)   ← called this
+at QueryExecutor.execute (lib/db/query.ts:47)        ← which called this
+                                                      ← which blew up here ↑
+```
+
+Find the first line that's in **your code** (not in `node_modules`). That's your entry point for investigation. Then read up to find the actual crash site.
+
+## The Most Common Error Messages
+
+These appear constantly. Memorize them:
+
+**`ECONNREFUSED`** — your code tried to connect to something (the database, Redis, an API) and got refused. The service isn't running or isn't reachable. Check: is your database up? Is the `DATABASE_URL` correct?
+
+**`ETIMEDOUT`** — a connection or query took too long and gave up. The service is reachable but slow. Check: is your database overloaded? Is there a slow query?
+
+**`Cannot read properties of undefined`** — your code assumed an object had a value and it didn't. You expected `user.profile.name` but `profile` was `null`. Check: is the data you're assuming exists actually there?
+
+**`relation does not exist`** — you're querying a table that doesn't exist in the database. A migration didn't run. Check: `npm run db:migrate` or equivalent.
+
+## The Practical Workflow
+
+1. Find the first `ERROR` after things started breaking
+2. Read the message — it's usually telling you exactly what happened
+3. Find the first line of your own code in the stack trace
+4. Look at that line — add a `console.log` before it if you need to see the values
+5. Fix the issue
+
+Logs are your best friend at 3am when your app is down. Learning to read them quickly is one of the most valuable debugging skills you can have.

@@ -1,26 +1,62 @@
-Your app handles 10 users fine. Then it goes viral. Something breaks. What is it?
+It's 11pm on a Tuesday. Your app was featured on a newsletter that went out to 50,000 people. 1,000 of them opened it at the same time.
 
-## The Usual Suspects
+Your phone starts buzzing. "Is your site down?" "Getting a 502." "Mine just says 'Error'."
 
-When traffic spikes, systems fail in a predictable order:
+Something broke. But what?
 
-1. **Database** — almost always the first bottleneck. Queries that take 5ms at 10 users take 500ms at 1,000 concurrent users. Connection pools fill up. Queries queue.
+## The Order of Failure
 
-2. **Server memory** — each request consumes RAM. With 1,000 concurrent requests, your server might run out of memory and crash.
+When traffic spikes, systems don't fail randomly. They fail in a predictable order. Knowing that order tells you where to look first.
 
-3. **Server CPU** — if your code does heavy computation per request (image processing, complex queries, rendering), CPU maxes out.
+<ArchDiagramStepper
+  nodes={[
+    { id: "users", position: { x: 40, y: 130 }, data: { label: "1,000 users" }, step: 0 },
+    { id: "server", position: { x: 240, y: 130 }, data: { label: "Your Server" }, step: 1 },
+    { id: "db", position: { x: 480, y: 130 }, data: { label: "Database" }, step: 2 },
+    { id: "ext", position: { x: 480, y: 260 }, data: { label: "External APIs" }, step: 3 }
+  ]}
+  edges={[
+    { id: "req", source: "users", target: "server", label: "1,000 req/s", animated: true, step: 1 },
+    { id: "query", source: "server", target: "db", label: "1,000 queries", animated: true, step: 2 },
+    { id: "ext", source: "server", target: "ext", label: "rate limited!", animated: true, step: 3 }
+  ]}
+  height="320px"
+/>
 
-4. **External APIs** — rate limits from third-party services (payment processors, email providers) can queue or fail requests.
+Step 1: 1,000 users hitting your app. Step 2: Your server relays all those requests to the database. Step 3: External APIs hit their rate limits and start refusing.
 
-## Reading the Signs
+## What Usually Breaks First: The Database
 
-| Symptom | Likely cause |
-|---------|-------------|
-| Slow responses, increasing over time | Database overload |
-| Sudden crashes, restarts | Out of memory |
-| 429 errors | Rate limiting |
-| Timeouts on specific endpoints | Slow queries or external calls |
+Almost always, the first thing to crack is the database.
+
+Your server is relatively scalable — it handles requests fast and moves on. But the database has a fixed connection pool, usually 10–100 connections.
+
+At 10 users, no problem. At 1,000 simultaneous users, 900 are waiting for a connection to free up. Queries that took 5ms now take 2 seconds because they're queued. Your server times out waiting. Users see errors.
+
+## What Breaks Second: Memory
+
+Each open request holds data in memory — the request body, session data, in-progress work. At 1,000 concurrent requests, your server might be holding 200MB of data in RAM.
+
+If you only have 256MB, you're dead. The process crashes and restarts, dropping every in-flight request.
+
+## What Breaks Third: CPU
+
+If your server does heavy work per request — parsing large JSON payloads, resizing images, running complex calculations — 1,000 simultaneous requests will peg the CPU at 100%.
+
+Everything slows to a crawl. Responses that took 20ms now take 30 seconds.
+
+## How to Read the Signs
+
+| Symptom | Most likely cause |
+|---------|------------------|
+| Slow responses that keep getting slower | Database connection pool exhausted |
+| Server crashes and restarts | Out of memory |
+| 429 errors from external services | Rate limit hit |
+| Timeouts on one specific endpoint | That endpoint has a slow query |
+| Everything fine, then sudden crash | Memory leak accumulated under load |
 
 ## The Good News
 
-These failure modes are well-understood. Every scaling technique — caching, indexing, load balancing — addresses one of them specifically. Knowing what breaks first tells you what to fix first.
+These failure modes are well-understood. Every scaling technique you'll learn in the next chapters — caching, indexing, load balancing, async queues — addresses one of them specifically.
+
+Knowing what breaks first means you know what to fix first. You don't need to guess.

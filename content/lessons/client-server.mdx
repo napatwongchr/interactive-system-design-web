@@ -1,23 +1,61 @@
-When multiple people use your app at the same time, they're all **clients** sharing one **server**.
+Two of your friends click "Save" at exactly the same time. Alice is updating her profile. Bob is creating a new post.
 
-## Clients and Servers
+Your server gets two requests simultaneously. One server. Two clients. What happens?
 
-A **client** is anything that makes requests — a browser, a mobile app, another server. A **server** is a program that listens for those requests and responds.
+## One Server, Many Clients
 
-The key insight: one server handles thousands of clients. Not by running thousands of copies of itself, but by handling requests one at a time, very fast.
+A **client** is anything that sends requests — a browser tab, a mobile app, another service. A **server** is the program that listens for requests and responds.
 
-## Shared State
+The key insight: one server handles thousands of clients. Not by cloning itself, but by processing requests very quickly and moving on.
 
-Multiple clients accessing the same server means they all share the same database. When Alice updates her profile, Bob's next page load sees the updated data.
+<ArchDiagramStepper
+  nodes={[
+    { id: "alice", position: { x: 40, y: 60 }, data: { label: "Alice (Browser)" }, step: 0 },
+    { id: "bob", position: { x: 40, y: 200 }, data: { label: "Bob (Browser)" }, step: 0 },
+    { id: "server", position: { x: 280, y: 130 }, data: { label: "Your Server" }, step: 1 },
+    { id: "db", position: { x: 520, y: 130 }, data: { label: "Database" }, step: 2 }
+  ]}
+  edges={[
+    { id: "areq", source: "alice", target: "server", label: "PUT /profile", animated: true, step: 1 },
+    { id: "breq", source: "bob", target: "server", label: "POST /posts", animated: true, step: 1 },
+    { id: "query", source: "server", target: "db", label: "two queries", animated: true, step: 2 }
+  ]}
+  height="280px"
+/>
 
-This is a feature. It's also a source of bugs — two clients writing to the same record at the same time can corrupt data. Your database handles this with transactions and locks.
+Step 1: Two clients. Step 2: One server receives both requests. Step 3: The server sends queries to the database, which handles them safely one at a time.
 
-## The Stateless Request
+## Shared State Is a Feature (and a Bug)
 
-HTTP is stateless: each request stands alone. The server doesn't remember the previous request from the same client. That's why you need:
+Because all clients hit the same server and the same database, they see the same data.
 
-- **Sessions** or **JWTs** to know who's logged in
-- **Cookies** to persist data across requests
-- A **database** to remember anything important
+When Alice updates her username, Bob's next page load shows the new name. That's the feature — a shared, consistent world.
 
-The server handles thousands of clients by treating each request as independent.
+But it's also a source of bugs. Two users updating the same record at the same time can produce unexpected results. Your database handles this with **transactions** — a way of saying "these changes must all succeed or all fail together."
+
+## HTTP Is Stateless (But Your App Isn't)
+
+Here's a quirk of HTTP: every request is independent. The server doesn't remember the previous request from the same client.
+
+Request 1: "Give me the homepage."  
+Request 2: "Give me my profile."
+
+To the server, those could be from completely different people. It has no memory.
+
+So how does your app know who's logged in? It uses one of three tricks:
+
+- **Session cookies** — the server gives the browser a token, the browser sends it back on every request
+- **JWTs** (JSON Web Tokens) — a cryptographically signed token that proves who you are, sent in every request header
+- **Database sessions** — the token maps to a row in a sessions table
+
+The AI probably picked one of these for you. If your app has `NEXTAUTH_SECRET` or `SESSION_SECRET` in its environment variables, that's the signing key for your session tokens.
+
+## Why This Matters at 10 Users
+
+Ten users feels small. But it's the first time you're sharing a server. This is when you discover:
+
+- Your database password is in your git history (fix this in the next lesson)
+- Two users can race to claim the same username (you need a `UNIQUE` constraint)
+- Your session tokens aren't set up correctly and users get logged out randomly
+
+These are solvable problems. Understanding the client-server model is the first step.

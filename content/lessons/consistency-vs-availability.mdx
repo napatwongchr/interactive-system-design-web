@@ -1,32 +1,69 @@
-The CAP theorem states that a distributed system can only guarantee two of three properties. Understanding this trade-off shapes every database and architecture decision.
+Your app has two database servers — a primary that handles writes, and a replica that handles reads. You did this to reduce load on the primary.
 
-## The Three Properties
+A user updates their username. The write goes to the primary. Half a second later, the same user loads their profile. The read goes to the replica.
 
-**Consistency (C)** — every read returns the most recent write. If you write "John's balance is $100" and immediately read it from a different server, you get $100, not a stale value.
+The replica hasn't synced yet. They see their old username.
 
-**Availability (A)** — every request gets a response. The system doesn't return an error just because some nodes are unreachable.
+They refresh. It's correct. They're confused. You have a consistency problem.
 
-**Partition Tolerance (P)** — the system works even when network partitions occur (some nodes can't communicate with others).
+## The CAP Theorem
 
-## The Trade-off
+The CAP theorem says a distributed system can only guarantee two of three properties at any time when a **network partition** occurs (when nodes can't communicate):
 
-Network partitions happen. You can't opt out of P in a real distributed system. So the real choice is **CP vs AP**:
+- **Consistency** — every read returns the most recent write
+- **Availability** — every request gets a response (not an error)
+- **Partition Tolerance** — the system keeps working even when some nodes can't talk to each other
 
-**CP systems** — choose consistency over availability. When partitioned, refuse to respond rather than return stale data. Good for financial systems, inventory management — anywhere stale data causes real harm.
+Network partitions happen. You can't opt out. So the real choice is always **CP vs AP**.
 
-**AP systems** — choose availability over consistency. When partitioned, continue serving requests, possibly with stale data. Reconcile later. Good for social feeds, shopping carts, analytics — anywhere eventual consistency is acceptable.
+<ArchDiagramStepper
+  nodes={[
+    { id: "client", position: { x: 40, y: 130 }, data: { label: "Client" }, step: 0 },
+    { id: "primary", position: { x: 280, y: 70 }, data: { label: "Primary DB (write)" }, step: 1 },
+    { id: "replica", position: { x: 280, y: 210 }, data: { label: "Replica DB (read)" }, step: 1 },
+    { id: "lag", position: { x: 530, y: 140 }, data: { label: "Replication lag ~500ms" }, step: 2 }
+  ]}
+  edges={[
+    { id: "write", source: "client", target: "primary", label: "write", animated: true, step: 1 },
+    { id: "read", source: "client", target: "replica", label: "read (stale!)", animated: true, step: 2 },
+    { id: "sync", source: "primary", target: "replica", label: "async replication", animated: true, step: 2 },
+    { id: "problem", source: "replica", target: "lag", animated: true, step: 2 }
+  ]}
+  height="290px"
+/>
 
-## Eventual Consistency
+Step 1: You have two database nodes. Step 2: A write goes to the primary. The read goes to the replica. Step 3: The replica hasn't synced yet — the client sees stale data. That's eventual consistency.
 
-Most modern systems are AP with **eventual consistency**: after a write, all nodes will eventually converge to the same state — just not immediately.
+## CP Systems: Consistent but May Refuse
 
-Your social media likes counter might be off by a few for a second. Your bank balance must be correct instantly.
+A CP system chooses consistency over availability. When partitioned, it refuses to respond rather than return potentially stale data.
 
-## In Practice
+**Example:** A bank transfer. You can't have two ATMs both thinking there's $500 in an account when one withdrawal hasn't replicated yet. The system refuses the second withdrawal until it's sure about the balance.
 
-- **Postgres with synchronous replication** — CP
-- **Cassandra** — AP by default
-- **DynamoDB** — configurable, AP by default
-- **Redis Cluster** — typically AP
+CP databases: Postgres with synchronous replication, HBase, Zookeeper.
 
-Most apps should default to Postgres and not worry about this trade-off until they're distributed across data centers.
+## AP Systems: Available but May Be Stale
+
+An AP system chooses availability over consistency. When partitioned, it keeps responding — but some responses might be stale. Data converges to consistency eventually.
+
+**Example:** Your Twitter-style like counter. If it's off by 3 for half a second, nobody cares. The app stays up, users can interact, and the counts sync eventually.
+
+AP databases: Cassandra, DynamoDB (default), CouchDB.
+
+## Eventual Consistency in Practice
+
+Most user-facing web apps are AP with **eventual consistency**: after a write, all nodes will eventually agree — just not instantly.
+
+The username display bug from the opening story is a form of eventual consistency. The fix options are:
+
+1. **Read your own writes** — after a write, route subsequent reads from the same user to the primary for a short window
+2. **Synchronous replication** — the write doesn't complete until the replica confirms it (slower writes)
+3. **Accept it** — a half-second lag on username display is genuinely acceptable for most products
+
+## The Practical Takeaway
+
+Most apps should run Postgres with a single primary. You don't encounter these trade-offs until you add replicas or split across data centers.
+
+When you do, the question is: for each type of data in your system, how stale is too stale? Financial data: zero tolerance. Social feed: seconds are fine. Profile data: under a second is usually acceptable.
+
+That tolerance guides your replication and caching strategy.
